@@ -221,7 +221,8 @@ public class MainWindow : Window
         roles=roles.Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(role=>StatusOrder(raid.Bosses.GetValueOrDefault(role)?.Status))
             .ThenBy(role=>Catalog.BossName(role,settings),StringComparer.CurrentCultureIgnoreCase).ToList();
-        string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.Btr);
+        var btrLocation=BtrTracker.Estimate(raid,DateTime.Now);
+        string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Followers)+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.Btr)+System.Text.Json.JsonSerializer.Serialize(raid.BtrReadyAt)+System.Text.Json.JsonSerializer.Serialize(raid.BtrTaxiAt)+btrLocation?.Key;
         if(signature==rendering)return;rendering=signature;bosses.Children.Clear();pmcs.Children.Clear();waiting.Children.Clear();
         if(raid.Map=="")
         {
@@ -229,7 +230,7 @@ public class MainWindow : Window
         }
         waiting.Visibility=Visibility.Collapsed;raidColumns.Visibility=Visibility.Visible;
         RenderPmcs(raid);
-        RenderBtr(raid);
+        RenderBtr(raid,btrLocation);
         if(filter.Mode=="off"){bosses.Children.Add(Theme.Label(I18n.T("이 맵은 감시하지 않도록 설정되어 있습니다.","此地图已设置为不监控。"),16,Theme.Muted));FitWindowToContent();return;}
         if(roles.Count==0){bosses.Children.Add(Theme.Label(filter.Mode=="selected"?I18n.T("선택된 보스가 없습니다. 설정에서 보스를 선택해 주세요.","未选择首领，请在设置中选择。"):I18n.T("모든 보스 감시 중 · 보스 판정 기록 대기","正在监控所有首领 · 等待判定记录"),16,Theme.Muted));FitWindowToContent();return;}
         foreach(string role in roles)
@@ -245,6 +246,14 @@ public class MainWindow : Window
             {
                 content.Children.Add(CompactLabel(Helpers.LifeStatus(state,raid.Ended),15,
                     state.LifeInstances.Count>0 && state.LifeInstances.All(i=>i.LifeStatus=="DeadConfirmed")?Theme.Muted:Theme.Green));
+                var followers=raid.Followers.Values.Where(f=>Catalog.FollowerParent(f.Role).Equals(role,StringComparison.OrdinalIgnoreCase)).SelectMany(f=>f.LifeInstances).ToList();
+                if(followers.Count>0)
+                {
+                    int followerDead=followers.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
+                    int followerAlive=followers.Count-followerDead;
+                    string followerLife=raid.Ended?I18n.T("사망 미확인","死亡未确认"):I18n.T("생존 추정","推测存活");
+                    content.Children.Add(CompactLabel($"{I18n.T("쫄","随从")} {followers.Count}{I18n.T("명","个")} · {followerLife} {followerAlive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {followerDead}{I18n.T("명","个")}",13,followerAlive>0?Theme.Green:Theme.Muted));
+                }
                 if(state.LifeInstances.Count>1)
                     foreach(var instance in state.LifeInstances.Where(i=>i.DiedAt!=null))
                         content.Children.Add(CompactLabel($"{I18n.T("개체", "个体")} {instance.BotId} · {I18n.T("사망 확인", "已确认死亡")} {instance.DiedAt:HH:mm:ss}",12,Theme.Muted));
@@ -298,15 +307,21 @@ public class MainWindow : Window
             pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
         }
     }
-    private void RenderBtr(RaidState raid)
+    private void RenderBtr(RaidState raid,BtrLocationEstimate? location)
     {
         if(raid.Btr is not BossState state || state.Status!="Confirmed")return;
         var title=CompactLabel("BTR",16,Theme.Text);title.Margin=new Thickness(0,10,0,5);pmcs.Children.Add(title);
         var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
         content.Children.Add(CompactLabel("BTR",18));
         content.Children.Add(CompactLabel(Helpers.Status(state.Status)+(raid.Ended?I18n.T(" · 레이드 종료"," · 战局已结束"):""),15,Theme.Green));
+        if(location!=null)
+        {
+            content.Children.Add(CompactLabel(location.Summary,15,raid.Ended?Theme.Muted:Theme.Amber));
+            if(location.Detail!="")content.Children.Add(CompactLabel(location.Detail,12,Theme.Muted));
+        }
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("기록", "记录")} {state.At:HH:mm:ss}",12,Theme.Muted));
         content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(state.Zone==""?I18n.T("확인 불가","无法确认"):state.Zone)}",12));
+        content.Children.Add(CompactLabel($"{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
         pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=Theme.Green,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
     }
     private void RenderWaiting(StackPanel target)

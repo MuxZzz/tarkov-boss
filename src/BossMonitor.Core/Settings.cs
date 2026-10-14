@@ -222,6 +222,19 @@ public static class Catalog
         return LocalizedMaps.GetValueOrDefault(canonical, canonical);
     }
     public static bool IsBoss(string role, AppSettings settings) => Bosses.ContainsKey(role) || settings.CustomRoles.Keys.Any(x=>x.Equals(role,StringComparison.OrdinalIgnoreCase)) || role.StartsWith("boss", StringComparison.OrdinalIgnoreCase);
+    public static string FollowerParent(string role)
+    {
+        if(role.Equals("followerBully",StringComparison.OrdinalIgnoreCase) || role.Equals("followerBullyBlackDiv",StringComparison.OrdinalIgnoreCase) || role.Equals("bossBullyBlackDiv",StringComparison.OrdinalIgnoreCase)) return "bossBully";
+        if(role.Equals("followerKojaniy",StringComparison.OrdinalIgnoreCase)) return "bossKojaniy";
+        if(role.StartsWith("followerGluhar",StringComparison.OrdinalIgnoreCase)) return "bossGluhar";
+        if(role.Equals("followerSanitar",StringComparison.OrdinalIgnoreCase)) return "bossSanitar";
+        if(role.Equals("followerZryachiy",StringComparison.OrdinalIgnoreCase)) return "bossZryachiy";
+        if(role.StartsWith("followerBoar",StringComparison.OrdinalIgnoreCase) || role.Equals("bossBoarSniper",StringComparison.OrdinalIgnoreCase)) return "bossBoar";
+        if(role.StartsWith("followerKolontay",StringComparison.OrdinalIgnoreCase)) return "bossKolontay";
+        if(role.Equals("followerTagilla",StringComparison.OrdinalIgnoreCase)) return "bossTagilla";
+        if(role.Equals("sectantWarrior",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantOni",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantPredvestnik",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantPrizrak",StringComparison.OrdinalIgnoreCase)) return "sectantPriest";
+        return "";
+    }
 }
 
 public static class Paths

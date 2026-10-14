@@ -61,8 +61,11 @@ public class RaidState
     public double GameTimeFactor { get; set; } = 7;
     public TimeSpan? RaidDuration { get; set; }
     public Dictionary<string,BossState> Bosses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string,BossState> Followers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,PmcState> Pmcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public BossState? Btr { get; set; }
+    public List<DateTime> BtrReadyAt { get; set; } = [];
+    public List<DateTime> BtrTaxiAt { get; set; } = [];
 }
 
 public class LogReader
@@ -71,6 +74,7 @@ public class LogReader
     {
         public long Offset, Line;
         public DateTime Created;
+        public DateTime? LastTimestamp;
         public string Tail = "";
         public Decoder Decoder = Encoding.UTF8.GetDecoder();
     }
@@ -132,13 +136,15 @@ public class LogReader
                 {
                     cursor.Line++;
                     string line=lines[i].TrimEnd('\r');
+                    if(line.Length>=23 && DateTime.TryParseExact(line.AsSpan(0,23),"yyyy-MM-dd HH:mm:ss.fff",CultureInfo.InvariantCulture,DateTimeStyles.None,out var lineTime))
+                        cursor.LastTimestamp=lineTime;
                     if (line.Contains("|aiData|") && (line.Contains("|Trace|") || line.Contains("Init Boss wave:") || line.Contains("Bot activate")))
                     {
                         HasAiData=true;
                         if(DateTime.TryParseExact(line.AsSpan(0,Math.Min(23,line.Length)),"yyyy-MM-dd HH:mm:ss.fff",CultureInfo.InvariantCulture,DateTimeStyles.None,out var aiTime) && (LatestAiAt==null || aiTime>LatestAiAt)) LatestAiAt=aiTime;
                     }
                     bool timeOnly=hasCanonicalAiAndApplication && Regex.IsMatch(Path.GetFileName(file), @" output_\d+\.log$");
-                    var ev=Parse(line,new(file,cursor.Line),timeOnly);
+                    var ev=Parse(line,new(file,cursor.Line),timeOnly,cursor.LastTimestamp);
                     if(ev!=null && seen.Add(ev.Key)) { events.Add(ev); changed=true; if(ev.Kind is "Active" or "Plan") ObservedRoles.Add(ev.Value); }
                 }
                 // Ignore unbounded malformed lines, which must never exhaust memory.
@@ -149,13 +155,20 @@ public class LogReader
         long pending=files.Sum(f=>Math.Max(0,new FileInfo(f).Length-(cursors.GetValueOrDefault(f)?.Offset??0)));
         Diagnostic=pending>0 ? I18n.T("로그 복원 중…", "正在恢复日志…") : HasAiData ? I18n.T("로그 연결됨 · 상세 AI 기록 확인", "日志已连接 · 已检测到详细 AI 记录") : I18n.T("AI 상세 로그 대기 · 로컬 PvE 지원", "等待详细 AI 日志 · 支持本地 PvE");
     }
-    private static LogEvent? Parse(string line, Evidence evidence, bool timeOnly=false)
+    private static LogEvent? Parse(string line, Evidence evidence, bool timeOnly=false,DateTime? inheritedTime=null)
     {
-        if(line.Length<24 || !DateTime.TryParseExact(line[..23],"yyyy-MM-dd HH:mm:ss.fff",CultureInfo.InvariantCulture,DateTimeStyles.None,out var time)) return null;
+        bool btrReady=line.Contains("Audio.Vehicles.BTR.BtrSoundController:OnReadyToDeparture(BtrReadyToDepartureEvent)",StringComparison.Ordinal);
+        bool btrTaxi=line.Contains("Service PlayerTaxi has already been purchased!",StringComparison.Ordinal);
+        DateTime time;
+        if(line.Length>=24 && DateTime.TryParseExact(line[..23],"yyyy-MM-dd HH:mm:ss.fff",CultureInfo.InvariantCulture,DateTimeStyles.None,out var parsedTime)) time=parsedTime;
+        else if(btrReady && inheritedTime is DateTime previousTime) time=previousTime;
+        else return null;
         string kind="",value="",extra="",id="",botId="";
         int? spawnChance=null;
         Match m;
-        if((m=Regex.Match(line,@"RealDateTime:\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\s+GameDateTime:(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})\s+factor:([0-9.]+)")).Success &&
+        if(btrReady) kind="BtrReady";
+        else if(btrTaxi) kind="BtrTaxi";
+        else if((m=Regex.Match(line,@"RealDateTime:\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\s+GameDateTime:(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})\s+factor:([0-9.]+)")).Success &&
             DateTime.TryParseExact(m.Groups[1].Value,"MM/dd/yyyy HH:mm:ss",CultureInfo.InvariantCulture,DateTimeStyles.None,out var gameTime))
         {
             kind="GameTime";value=gameTime.ToString("O",CultureInfo.InvariantCulture);extra=m.Groups[2].Value;
@@ -211,7 +224,7 @@ public class LogReader
     }
     private static bool IsPmc(string role) => role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase) || role.Equals("pmcUSEC",StringComparison.OrdinalIgnoreCase);
     private static IEnumerable<BossInstance> LifeInstances(RaidState raid)
-        => raid.Bosses.Values.SelectMany(b=>b.LifeInstances).Concat(raid.Pmcs.Values.SelectMany(p=>p.LifeInstances))
+        => raid.Bosses.Values.SelectMany(b=>b.LifeInstances).Concat(raid.Followers.Values.SelectMany(f=>f.LifeInstances)).Concat(raid.Pmcs.Values.SelectMany(p=>p.LifeInstances))
             .Concat(raid.Btr?.LifeInstances??[]);
     private List<RaidState> Rebuild(AppSettings settings)
     {
@@ -254,6 +267,16 @@ public class LogReader
             }
             if(ev.Kind=="Start") {current.Started=ev.Time;continue;}
             if(ev.Kind=="End") {current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();continue;}
+            if(ev.Kind=="BtrReady")
+            {
+                if(!current.Ended && (current.BtrReadyAt.Count==0 || current.BtrReadyAt[^1]!=ev.Time)) current.BtrReadyAt.Add(ev.Time);
+                continue;
+            }
+            if(ev.Kind=="BtrTaxi")
+            {
+                if(!current.Ended && (current.BtrTaxiAt.Count==0 || current.BtrTaxiAt[^1]!=ev.Time)) current.BtrTaxiAt.Add(ev.Time);
+                continue;
+            }
             if(ev.Kind=="Active" && !current.Ended && ev.BotId!="") activeProfiles[ev.BotId]=ev.Id==""?ev.Time.ToString("O"):ev.Id;
             if(ev.Kind=="Dispose")
             {
@@ -330,6 +353,21 @@ public class LogReader
                 }
                 continue;
             }
+            if(Catalog.FollowerParent(ev.Value)!="" && !current.Ended)
+            {
+                if(ev.Kind=="Active")
+                {
+                    if(!current.Followers.TryGetValue(ev.Value,out var follower)) current.Followers[ev.Value]=follower=new() {Role=ev.Value};
+                    if(follower.Status!="Confirmed") {follower.At=ev.Time;follower.Position=ev.Extra;follower.Profile=ev.Id;follower.Evidence=ev.Evidence;}
+                    follower.Status="Confirmed";
+                    string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+                    if(!follower.Instances.Contains(instance))follower.Instances.Add(instance);
+                    if(!follower.LifeInstances.Any(i=>i.Profile==instance))
+                        follower.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
+                    follower.Count=follower.Instances.Count;
+                }
+                continue;
+            }
             if(!Catalog.IsBoss(ev.Value,settings) || current.Ended) continue;
             if(ev.Kind=="Plan")
             {
@@ -386,6 +424,8 @@ public class LogReader
                 .Select(e=>e.Extra).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             btr.Zone=zones.Count==1?zones[0]:"";
         }
+        if(raid.Ended)
+            foreach(var instance in raid.Followers.Values.SelectMany(f=>f.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         if(raid.Ended)
             foreach(var instance in raid.Pmcs.Values.SelectMany(p=>p.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         }

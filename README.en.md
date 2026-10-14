@@ -17,6 +17,7 @@ A Windows x64 app that detects boss spawns in official PvE raids running locally
 
 - Detects the current map from raid logs
 - Lets you choose bosses to monitor for each map
+- Continuously estimates the Woods BTR's current stop and travel segment from log signals
 - Supports installation while the game is running
 - Cleans old game logs safely with a Windows scheduled task
 
@@ -47,7 +48,7 @@ The uninstaller removes the log-cleanup scheduled task and automatically restore
 - Supported: official PvE raids that run locally and produce detailed AI logs
 - Not supported: PvP, online PvE, and maps that do not support local play
 - Maps such as Streets of Tarkov, which cannot be played locally, are not supported
-- Current position and survival-state detection are not guaranteed
+- Boss positions and survival states are not guaranteed. The Woods BTR location is an estimate based on departure-ready signals and route timing
 
 ## Build
 
