@@ -187,8 +187,12 @@ public class LogReader
         else if(line.Contains("|application|") && (m=Regex.Match(line,@"RaidId:([^,]+),.*Locations:([^\r\n]+)")).Success)
         {
             kind="Map"; extra=m.Groups[1].Value.Trim();
-            // Transit lists the current location before the first arrow; future destinations are not current maps.
-            value=Catalog.CanonicalMapId(m.Groups[2].Value.Split("->",StringSplitOptions.None)[0].Trim().TrimEnd(','));
+            // Transit appends visited locations to the route. The last non-empty
+            // entry is the map currently being loaded; the first entry is stale
+            // after moving to another map.
+            string location=m.Groups[2].Value.Split("->",StringSplitOptions.None)
+                .Select(x=>x.Trim().TrimEnd(',')).LastOrDefault(x=>x!="")??"";
+            value=Catalog.CanonicalMapId(location);
         }
         else if(line.Contains("|application|GameStarted:")) kind="Start";
         else if(line.Contains("|backend|") && line.Contains("---> Request") && line.Contains("client/match/local/end")) kind="End";
@@ -265,9 +269,18 @@ public class LogReader
             }
             if(ev.Kind=="Map")
             {
-                if(current.RaidId!="" && current.RaidId!=ev.Extra)
-                { current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();current=new() { Boundary=ev.Time,Key=$"{Session}|{ev.Extra}" };raids.Add(current); }
-                current.Map=ev.Value;current.RaidId=ev.Extra;current.Key=$"{Session}|{ev.Extra}";continue;
+                bool raidChanged=current.RaidId!="" && !current.RaidId.Equals(ev.Extra,StringComparison.OrdinalIgnoreCase);
+                bool mapChanged=current.Map!="" && ev.Value!="" && !current.Map.Equals(ev.Value,StringComparison.OrdinalIgnoreCase);
+                if(raidChanged || mapChanged)
+                {
+                    current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();
+                    string key=mapChanged && !raidChanged
+                        ? $"{Session}|{ev.Extra}|{ev.Value}|{ev.Time:O}"
+                        : $"{Session}|{ev.Extra}";
+                    current=new() {Boundary=ev.Time,Key=key};raids.Add(current);
+                }
+                else if(current.RaidId=="") current.Key=$"{Session}|{ev.Extra}";
+                current.Map=ev.Value;current.RaidId=ev.Extra;continue;
             }
             if(ev.Kind=="Start") {current.Started=ev.Time;continue;}
             if(ev.Kind=="End") {current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();continue;}
