@@ -93,7 +93,7 @@ public class MapFilter
 }
 public class AppSettings
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
     public string GamePath { get; set; } = "";
     public bool AlwaysOnTop { get; set; } = true;
     public bool CloseToTray { get; set; } = true;
@@ -116,7 +116,7 @@ public class AppSettings
         try
         {
             var settings = Product.ReadJson<AppSettings>(path) ?? new();
-            if (settings.SchemaVersion > 1) throw new IOException(I18n.T("더 새로운 프로그램 버전의 설정입니다.", "此设置来自更高版本的程序。"));
+            if (settings.SchemaVersion > 2) throw new IOException(I18n.T("더 새로운 프로그램 버전의 설정입니다.", "此设置来自更高版本的程序。"));
             settings.Maps ??= new(); settings.CustomRoles ??= new();
             foreach(var filter in settings.Maps.Values){filter.Mode=string.IsNullOrWhiteSpace(filter.Mode)?"all":filter.Mode;filter.Roles??=[];}
             bool added=false;
@@ -130,6 +130,13 @@ public class AppSettings
                 {
                     settings.Maps[entry.Key]=new() {Mode="selected",Roles=entry.Value.ToList()};added=true;
                 }
+            if(settings.SchemaVersion<2)
+            {
+                var laboratory=settings.Filter("laboratory");
+                if(laboratory.Mode=="selected" && !laboratory.Roles.Contains("bossScourgeEventLab",StringComparer.OrdinalIgnoreCase))
+                    laboratory.Roles.Add("bossScourgeEventLab");
+                settings.SchemaVersion=2;added=true;
+            }
             var day=settings.Filter("factory4_day");var night=settings.Filter("factory4_night");
             string factoryMode=day.Mode=="selected"||night.Mode=="selected"?"selected":day.Mode=="all"||night.Mode=="all"?"all":"off";
             var factoryRoles=day.Roles.Concat(night.Roles).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -155,6 +162,7 @@ public class AppSettings
 
 public static class Catalog
 {
+    public static readonly string[] SpecialAiRoles = ["exUsec","pmcBot"];
     // Standard spawns checked against the Official EFT Wiki on 2026-09-15.
     // Seasonal event spawns are excluded; Cultists retain their time/level conditions.
     public static readonly Dictionary<string,string[]> DefaultBosses = new(StringComparer.OrdinalIgnoreCase)
@@ -168,7 +176,7 @@ public static class Catalog
         ["Sandbox"]=[],
         ["factory4_day"]=["bossTagilla","sectantPriest"],
         ["factory4_night"]=["bossTagilla","sectantPriest"],
-        ["laboratory"]=[]
+        ["laboratory"]=["bossScourgeEventLab"]
     };
     public static readonly Dictionary<string, string> Bosses = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -176,7 +184,7 @@ public static class Catalog
         ["bossKojaniy"]="슈트르만", ["bossGluhar"]="글루하", ["bossSanitar"]="세니타",
         ["bossKnight"]="나이트", ["followerBigPipe"]="빅 파이프", ["followerBirdEye"]="버드아이",
         ["bossZryachiy"]="즈랴치", ["bossBoar"]="카반", ["bossKolontay"]="콜론타이",
-        ["bossPartisan"]="파르티잔", ["sectantPriest"]="컬티스트 사제"
+        ["bossPartisan"]="파르티잔", ["sectantPriest"]="컬티스트 사제", ["bossScourgeEventLab"]="스커지"
     };
     private static readonly Dictionary<string, string> BossesZh = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -184,7 +192,7 @@ public static class Catalog
         ["bossKojaniy"]="Shturman（舒特曼）", ["bossGluhar"]="Glukhar（格鲁哈尔）", ["bossSanitar"]="Sanitar（卫生员）",
         ["bossKnight"]="Knight（骑士）", ["followerBigPipe"]="Big Pipe（大管子）", ["followerBirdEye"]="Birdeye（鸟眼）",
         ["bossZryachiy"]="Zryachiy（邪眼）", ["bossBoar"]="Kaban（卡班）", ["bossKolontay"]="Kollontay（科伦泰）",
-        ["bossPartisan"]="Partisan（游击队员）", ["sectantPriest"]="邪教祭司"
+        ["bossPartisan"]="Partisan（游击队员）", ["sectantPriest"]="邪教祭司", ["bossScourgeEventLab"]="Scourge（灾厄）"
     };
     private static readonly Dictionary<string, string> BossesEn = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -192,7 +200,7 @@ public static class Catalog
         ["bossKojaniy"]="Shturman", ["bossGluhar"]="Glukhar", ["bossSanitar"]="Sanitar",
         ["bossKnight"]="Knight", ["followerBigPipe"]="Big Pipe", ["followerBirdEye"]="Birdeye",
         ["bossZryachiy"]="Zryachiy", ["bossBoar"]="Kaban", ["bossKolontay"]="Kollontay",
-        ["bossPartisan"]="Partisan", ["sectantPriest"]="Cultist Priest"
+        ["bossPartisan"]="Partisan", ["sectantPriest"]="Cultist Priest", ["bossScourgeEventLab"]="Scourge"
     };
     public static readonly Dictionary<string, string> Maps = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -221,6 +229,13 @@ public static class Catalog
         string canonical=CanonicalMapId(map);
         return LocalizedMaps.GetValueOrDefault(canonical, canonical);
     }
+    public static string CanonicalSpecialAiRole(string role) => role.Equals("exUsecFree",StringComparison.OrdinalIgnoreCase) ? "exUsec" : role;
+    public static bool IsSpecialAi(string role) => SpecialAiRoles.Contains(CanonicalSpecialAiRole(role),StringComparer.OrdinalIgnoreCase);
+    public static string SpecialAiName(string role) => role.Equals("exUsec",StringComparison.OrdinalIgnoreCase)
+        ? I18n.T("로그", "游荡者")
+        : role.Equals("pmcBot",StringComparison.OrdinalIgnoreCase)
+            ? I18n.T("레이더", "掠夺者")
+            : role;
     public static bool IsBoss(string role, AppSettings settings) => Bosses.ContainsKey(role) || settings.CustomRoles.Keys.Any(x=>x.Equals(role,StringComparison.OrdinalIgnoreCase)) || role.StartsWith("boss", StringComparison.OrdinalIgnoreCase);
     public static string FollowerParent(string role)
     {
@@ -232,6 +247,7 @@ public static class Catalog
         if(role.StartsWith("followerBoar",StringComparison.OrdinalIgnoreCase) || role.Equals("bossBoarSniper",StringComparison.OrdinalIgnoreCase)) return "bossBoar";
         if(role.StartsWith("followerKolontay",StringComparison.OrdinalIgnoreCase)) return "bossKolontay";
         if(role.Equals("followerTagilla",StringComparison.OrdinalIgnoreCase)) return "bossTagilla";
+        if(role.Equals("followerScourgeEventLab",StringComparison.OrdinalIgnoreCase)) return "bossScourgeEventLab";
         if(role.Equals("sectantWarrior",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantOni",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantPredvestnik",StringComparison.OrdinalIgnoreCase) || role.Equals("sectantPrizrak",StringComparison.OrdinalIgnoreCase)) return "sectantPriest";
         return "";
     }

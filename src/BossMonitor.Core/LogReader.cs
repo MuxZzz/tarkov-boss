@@ -10,6 +10,8 @@ public class BossInstance
 {
     public string Profile { get; set; } = "";
     public string BotId { get; set; } = "";
+    public string Position { get; set; } = "";
+    public string Zone { get; set; } = "";
     public DateTime SpawnedAt { get; set; }
     public string LifeStatus { get; set; } = "AliveEstimated";
     public DateTime? DiedAt { get; set; }
@@ -63,6 +65,7 @@ public class RaidState
     public Dictionary<string,BossState> Bosses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,BossState> Followers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,PmcState> Pmcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string,BossState> SpecialAis { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public BossState? Btr { get; set; }
     public List<DateTime> BtrReadyAt { get; set; } = [];
     public List<DateTime> BtrTaxiAt { get; set; } = [];
@@ -225,6 +228,7 @@ public class LogReader
     private static bool IsPmc(string role) => role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase) || role.Equals("pmcUSEC",StringComparison.OrdinalIgnoreCase);
     private static IEnumerable<BossInstance> LifeInstances(RaidState raid)
         => raid.Bosses.Values.SelectMany(b=>b.LifeInstances).Concat(raid.Followers.Values.SelectMany(f=>f.LifeInstances)).Concat(raid.Pmcs.Values.SelectMany(p=>p.LifeInstances))
+            .Concat(raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances))
             .Concat(raid.Btr?.LifeInstances??[]);
     private List<RaidState> Rebuild(AppSettings settings)
     {
@@ -353,6 +357,22 @@ public class LogReader
                 }
                 continue;
             }
+            if(Catalog.IsSpecialAi(ev.Value) && !current.Ended)
+            {
+                if(ev.Kind=="Active")
+                {
+                    string specialRole=Catalog.CanonicalSpecialAiRole(ev.Value);
+                    if(!current.SpecialAis.TryGetValue(specialRole,out var special)) current.SpecialAis[specialRole]=special=new() {Role=specialRole};
+                    if(special.Status!="Confirmed") {special.At=ev.Time;special.Position=ev.Extra;special.Profile=ev.Id;special.Evidence=ev.Evidence;}
+                    special.Status="Confirmed";
+                    string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+                    if(!special.Instances.Contains(instance))special.Instances.Add(instance);
+                    if(!special.LifeInstances.Any(i=>i.Profile==instance))
+                        special.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,Position=ev.Extra,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
+                    special.Count=special.Instances.Count;
+                }
+                continue;
+            }
             if(Catalog.FollowerParent(ev.Value)!="" && !current.Ended)
             {
                 if(ev.Kind=="Active")
@@ -424,10 +444,23 @@ public class LogReader
                 .Select(e=>e.Extra).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             btr.Zone=zones.Count==1?zones[0]:"";
         }
+        foreach(var special in raid.SpecialAis.Values)
+        {
+            DateTime boundaryEnd=raids.FirstOrDefault(r=>r.Boundary>raid.Boundary)?.Boundary??DateTime.MaxValue;
+            foreach(var instance in special.LifeInstances)
+            {
+                var zones=ordered.Where(e=>e.Kind=="Zone" && Catalog.CanonicalSpecialAiRole(e.Value).Equals(special.Role,StringComparison.OrdinalIgnoreCase) &&
+                    e.Time>=raid.Boundary && e.Time<boundaryEnd && e.BotId!="" && e.BotId==instance.BotId)
+                    .Select(e=>e.Extra).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                instance.Zone=zones.Count==1?zones[0]:"";
+            }
+        }
         if(raid.Ended)
             foreach(var instance in raid.Followers.Values.SelectMany(f=>f.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         if(raid.Ended)
             foreach(var instance in raid.Pmcs.Values.SelectMany(p=>p.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
+        if(raid.Ended)
+            foreach(var instance in raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         }
         return raids;
     }

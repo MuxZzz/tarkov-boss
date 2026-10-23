@@ -16,6 +16,7 @@ A Windows x64 app that detects boss spawns in official PvE raids running locally
 ## Features
 
 - Detects the current map from raid logs
+- Shows activated, estimated-alive, and confirmed-dead Rogue and Raider counts
 - Lets you choose bosses to monitor for each map
 - Continuously estimates the Woods BTR's current stop and travel segment from log signals
 - Supports installation while the game is running

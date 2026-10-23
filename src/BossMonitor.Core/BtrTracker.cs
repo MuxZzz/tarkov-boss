@@ -16,10 +16,14 @@ public static class BtrTracker
         if(raid.Ended)return new(Location(I18n.T("레이드 종료","战局已结束")),"",raid.EndedAt,"ended");
         if(!raid.Map.Equals("Woods",StringComparison.OrdinalIgnoreCase))
         {
-            string summary=raid.BtrReadyAt.Count==0
-                ? I18n.T("현재 위치 확인 대기","等待确认当前位置")
-                : string.Format(I18n.T("이동 신호 {0}회 감지 · 현재 위치 확인 불가","检测到 {0} 次移动信号 · 无法确认当前位置"),raid.BtrReadyAt.Count);
-            return new(Location(summary),I18n.T("현재 위치는 로그 기반 추정 기능이 지원되는 맵에서만 표시됩니다.","当前位置仅在支持日志推测的地图上显示。"),raid.BtrReadyAt.LastOrDefault(),"unsupported|"+raid.BtrReadyAt.Count);
+            var mapSignals=raid.BtrReadyAt.Where(t=>btr.At==null || t>=btr.At.Value).OrderBy(t=>t).ToList();
+            string summary=mapSignals.Count==0
+                ? I18n.T("순찰 상태 확인 대기","等待确认巡逻状态")
+                : string.Format(I18n.T("순찰 중 · 출발 신호 {0}회","巡逻中 · 检测到 {0} 次发车信号"),mapSignals.Count);
+            string detail=mapSignals.Count==0
+                ? ""
+                : string.Format(I18n.T("마지막 출발 신호 {0:HH:mm:ss}","最后发车信号 {0:HH:mm:ss}"),mapSignals[^1]);
+            return new(summary,detail,mapSignals.LastOrDefault(),"patrol|"+mapSignals.Count);
         }
 
         var signals=raid.BtrReadyAt.Where(t=>btr.At==null || t>=btr.At.Value).OrderBy(t=>t).ToList();
