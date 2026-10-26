@@ -62,6 +62,7 @@ public class RaidState
     public DateTime? GameDateTime { get; set; }
     public double GameTimeFactor { get; set; } = 7;
     public TimeSpan? RaidDuration { get; set; }
+    public int PlayerKills { get; set; }
     public Dictionary<string,BossState> Bosses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,BossState> Followers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,PmcState> Pmcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -208,6 +209,12 @@ public class LogReader
             var profile=Regex.Match(line,@"\bprofileId:(\w+)"); var bot=Regex.Match(line,@"\bid:(\w+)"); id=profile.Success?profile.Groups[1].Value:bot.Groups[1].Value;
             botId=bot.Success?bot.Groups[1].Value:"";
         }
+        else if(line.Contains("|aiData|AIDATA create") &&
+            (m=Regex.Match(line,@"\bPlayer id:1\s+isAI:False\b.*?\bname:(.*?)\s+Standing:")).Success)
+        {kind="LocalPlayer";value=m.Groups[1].Value.Trim();}
+        else if(line.Contains("|aiData|bot get hit from enemy.") &&
+            (m=Regex.Match(line,@"\bbotId:(\d+)\b.*?\sfrom:(.+?)\s*$")).Success)
+        {kind="Hit";botId=m.Groups[1].Value;value=m.Groups[2].Value.Trim();}
         else if(line.Contains("|aiData|") && (m=Regex.Match(line,@"\bbot dispose:(\d+)\b")).Success)
         {kind="Dispose";botId=m.Groups[1].Value;}
         else if(line.Contains("|aiData|") && Regex.IsMatch(line,@"\bBotDied pos:\([^)]+\)")) kind="Died";
@@ -240,6 +247,8 @@ public class LogReader
         RaidState current=new();
         var pendingDeaths=new Dictionary<string,LogEvent>(StringComparer.OrdinalIgnoreCase);
         var activeProfiles=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        var lastHitByBot=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        string localPlayer="";
         var ordered=events.OrderBy(e=>e.Time).ThenBy(e=>e.Kind=="Match"?0:e.Kind=="Map"?1:2).ThenBy(e=>e.Evidence.File,StringComparer.OrdinalIgnoreCase).ThenBy(e=>e.Evidence.Line).ToList();
         foreach(var ev in ordered)
         {
@@ -248,6 +257,8 @@ public class LogReader
                 current.Ended=true;current.EndedAt=ev.Time;
                 pendingDeaths.Clear();
                 activeProfiles.Clear();
+                lastHitByBot.Clear();
+                localPlayer="";
                 current=new() { Boundary=ev.Time,Key=$"{Session}|{ev.Time:O}" }; raids.Add(current); continue;
             }
             if(raids.Count==0) { current=new() { Boundary=ev.Time,Key=$"{Session}|{ev.Time:O}" }; raids.Add(current); }
@@ -273,7 +284,7 @@ public class LogReader
                 bool mapChanged=current.Map!="" && ev.Value!="" && !current.Map.Equals(ev.Value,StringComparison.OrdinalIgnoreCase);
                 if(raidChanged || mapChanged)
                 {
-                    current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();
+                    current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();lastHitByBot.Clear();localPlayer="";
                     string key=mapChanged && !raidChanged
                         ? $"{Session}|{ev.Extra}|{ev.Value}|{ev.Time:O}"
                         : $"{Session}|{ev.Extra}";
@@ -283,7 +294,7 @@ public class LogReader
                 current.Map=ev.Value;current.RaidId=ev.Extra;continue;
             }
             if(ev.Kind=="Start") {current.Started=ev.Time;continue;}
-            if(ev.Kind=="End") {current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();continue;}
+            if(ev.Kind=="End") {current.Ended=true;current.EndedAt=ev.Time;pendingDeaths.Clear();activeProfiles.Clear();lastHitByBot.Clear();localPlayer="";continue;}
             if(ev.Kind=="BtrReady")
             {
                 if(!current.Ended && (current.BtrReadyAt.Count==0 || current.BtrReadyAt[^1]!=ev.Time)) current.BtrReadyAt.Add(ev.Time);
@@ -294,7 +305,13 @@ public class LogReader
                 if(!current.Ended && (current.BtrTaxiAt.Count==0 || current.BtrTaxiAt[^1]!=ev.Time)) current.BtrTaxiAt.Add(ev.Time);
                 continue;
             }
-            if(ev.Kind=="Active" && !current.Ended && ev.BotId!="") activeProfiles[ev.BotId]=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+            if(ev.Kind=="LocalPlayer" && !current.Ended) {localPlayer=ev.Value;continue;}
+            if(ev.Kind=="Hit" && !current.Ended && ev.BotId!="") {lastHitByBot[ev.BotId]=ev.Value;continue;}
+            if(ev.Kind=="Active" && !current.Ended && ev.BotId!="")
+            {
+                activeProfiles[ev.BotId]=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+                lastHitByBot.Remove(ev.BotId);
+            }
             if(ev.Kind=="Dispose")
             {
                 if(!current.Ended) pendingDeaths[ev.Evidence.File]=ev;
@@ -309,6 +326,9 @@ public class LogReader
                     // enough intervening AI log rows for that cleanup sequence.
                     ev.Evidence.Line>disposal.Evidence.Line && ev.Evidence.Line-disposal.Evidence.Line<=64)
                 {
+                    if(localPlayer!="" && string.Equals(lastHitByBot.GetValueOrDefault(disposal.BotId),localPlayer,StringComparison.OrdinalIgnoreCase))
+                        current.PlayerKills++;
+                    lastHitByBot.Remove(disposal.BotId);
                     var matches=LifeInstances(current)
                         .Where(i=>i.BotId==disposal.BotId && i.SpawnedAt<=disposal.Time &&
                             activeProfiles.GetValueOrDefault(i.BotId)==i.Profile)
