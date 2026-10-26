@@ -163,6 +163,12 @@ public class AppSettings
 public static class Catalog
 {
     public static readonly string[] SpecialAiRoles = ["exUsec","pmcBot"];
+    public static readonly Dictionary<string,string[]> MapSpecialAiRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Lighthouse"]=["exUsec"],
+        ["RezervBase"]=["pmcBot"],
+        ["laboratory"]=["pmcBot"],
+    };
     // Standard spawns checked against the Official EFT Wiki on 2026-09-15.
     // Seasonal event spawns are excluded; Cultists retain their time/level conditions.
     public static readonly Dictionary<string,string[]> DefaultBosses = new(StringComparer.OrdinalIgnoreCase)
@@ -230,6 +236,7 @@ public static class Catalog
         return LocalizedMaps.GetValueOrDefault(canonical, canonical);
     }
     public static string CanonicalSpecialAiRole(string role) => role.Equals("exUsecFree",StringComparison.OrdinalIgnoreCase) ? "exUsec" : role;
+    public static string[] SpecialAiRolesForMap(string map) => MapSpecialAiRoles.GetValueOrDefault(CanonicalMapId(map),[]);
     public static bool IsSpecialAi(string role) => SpecialAiRoles.Contains(CanonicalSpecialAiRole(role),StringComparer.OrdinalIgnoreCase);
     public static string SpecialAiName(string role) => role.Equals("exUsec",StringComparison.OrdinalIgnoreCase)
         ? I18n.T("로그", "游荡者")
