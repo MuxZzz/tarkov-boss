@@ -258,7 +258,13 @@ public class MainWindow : Window
                 if(state.LifeInstances.Count>1)
                     foreach(var instance in state.LifeInstances.Where(i=>i.DiedAt!=null))
                         content.Children.Add(CompactLabel($"{I18n.T("개체", "个体")} {instance.BotId} · {I18n.T("사망 확인", "已确认死亡")} {instance.DiedAt:HH:mm:ss}",12,Theme.Muted));
-                content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(state.Zone==""?I18n.T("확인 불가","无法确认"):state.Zone)}\n{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
+                string zoneDisplay=state.Zone;
+                if(I18n.IsChinese && state.Position!="")
+                {
+                    string poi=MapGeo.DescribeLocation(raid.Map,state.Position);
+                    if(poi!="")zoneDisplay=poi;
+                }
+                content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(zoneDisplay==""?I18n.T("확인 불가","无法确认"):zoneDisplay)}\n{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
                 if(state.Count>1)content.Children.Add(CompactLabel($"{I18n.T("활성화 개체", "已激活个体")} {state.Count}",12,Theme.Muted));
             }
             bosses.Children.Add(new Border {Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
