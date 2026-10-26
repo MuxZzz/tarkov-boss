@@ -124,7 +124,12 @@ public class AppSettings
             added|=settings.Maps.Remove("Sandbox_high");
             added|=settings.CustomRoles.Remove("gifter");
             foreach(var filter in settings.Maps.Values)
-                if(filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0)added=true;
+            {
+                added|=filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0;
+                // Rogue (exUsec) and Raider (pmcBot) are rendered as their own special AI
+                // cards; stale role entries would otherwise appear as raw-ID boss cards.
+                added|=filter.Roles.RemoveAll(r=>Catalog.IsSpecialAi(r))>0;
+            }
             foreach(var entry in Catalog.DefaultBosses)
                 if(!settings.Maps.Keys.Any(id=>id.Equals(entry.Key,StringComparison.OrdinalIgnoreCase)))
                 {

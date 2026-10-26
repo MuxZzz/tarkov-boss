@@ -343,7 +343,7 @@ public class MainWindow : Window
                 var first=state.LifeInstances.OrderBy(i=>i.SpawnedAt).FirstOrDefault();
                 if(first!=null)
                 {
-                    string zone=first.Zone==""?I18n.T("확인 불가","无法确认"):first.Zone;
+                    string zone=FirstSpawnZone(raid.Map,first.Zone,first.Position);
                     string position=first.Position==""?I18n.T("확인 불가","无法确认"):first.Position;
                     content.Children.Add(CompactLabel($"{I18n.T("최초 구역","首次区域")}: {zone} · {I18n.T("최초 좌표","首次坐标")}: {position}",12));
                 }
@@ -351,6 +351,16 @@ public class MainWindow : Window
             else content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
             pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=confirmed&&alive>0?Theme.Green:Theme.Muted,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
         }
+    }
+    // MapGeo POI names are Simplified Chinese, so only substitute them for Chinese users.
+    private static string FirstSpawnZone(string map,string zone,string position)
+    {
+        if(I18n.IsChinese && position!="")
+        {
+            string poi=MapGeo.DescribeLocation(map,position);
+            if(poi!="")return poi;
+        }
+        return zone==""?I18n.T("확인 불가","无法确认"):zone;
     }
     private void RenderBtr(RaidState raid,BtrLocationEstimate? location)
     {
@@ -365,7 +375,7 @@ public class MainWindow : Window
             if(location.Detail!="")content.Children.Add(CompactLabel(location.Detail,12,Theme.Muted));
         }
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("기록", "记录")} {state.At:HH:mm:ss}",12,Theme.Muted));
-        content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(state.Zone==""?I18n.T("확인 불가","无法确认"):state.Zone)}",12));
+        content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {FirstSpawnZone(raid.Map,state.Zone,state.Position)}",12));
         content.Children.Add(CompactLabel($"{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
         pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=Theme.Green,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
     }
