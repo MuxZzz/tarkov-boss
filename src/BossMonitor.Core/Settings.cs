@@ -126,6 +126,7 @@ public class AppSettings
             foreach(var filter in settings.Maps.Values)
             {
                 added|=filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0;
+                added|=filter.Roles.RemoveAll(r=>r.Equals("bossScourgeEventLab",StringComparison.OrdinalIgnoreCase))>0;
                 // Rogue (exUsec) and Raider (pmcBot) are rendered as their own special AI
                 // cards; stale role entries would otherwise appear as raw-ID boss cards.
                 added|=filter.Roles.RemoveAll(r=>Catalog.IsSpecialAi(r))>0;
@@ -137,9 +138,6 @@ public class AppSettings
                 }
             if(settings.SchemaVersion<2)
             {
-                var laboratory=settings.Filter("laboratory");
-                if(laboratory.Mode=="selected" && !laboratory.Roles.Contains("bossScourgeEventLab",StringComparer.OrdinalIgnoreCase))
-                    laboratory.Roles.Add("bossScourgeEventLab");
                 settings.SchemaVersion=2;added=true;
             }
             var day=settings.Filter("factory4_day");var night=settings.Filter("factory4_night");
@@ -167,7 +165,7 @@ public class AppSettings
 
 public static class Catalog
 {
-    public static readonly string[] SpecialAiRoles = ["exUsec","pmcBot"];
+    private static readonly HashSet<string> SpecialAiRoles = new(StringComparer.OrdinalIgnoreCase) {"exUsec","pmcBot"};
     public static readonly Dictionary<string,string[]> MapSpecialAiRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Lighthouse"]=["exUsec"],
@@ -187,7 +185,7 @@ public static class Catalog
         ["Sandbox"]=[],
         ["factory4_day"]=["bossTagilla","sectantPriest"],
         ["factory4_night"]=["bossTagilla","sectantPriest"],
-        ["laboratory"]=["bossScourgeEventLab"]
+        ["laboratory"]=[]
     };
     public static readonly Dictionary<string, string> Bosses = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -242,7 +240,7 @@ public static class Catalog
     }
     public static string CanonicalSpecialAiRole(string role) => role.Equals("exUsecFree",StringComparison.OrdinalIgnoreCase) ? "exUsec" : role;
     public static string[] SpecialAiRolesForMap(string map) => MapSpecialAiRoles.GetValueOrDefault(CanonicalMapId(map),[]);
-    public static bool IsSpecialAi(string role) => SpecialAiRoles.Contains(CanonicalSpecialAiRole(role),StringComparer.OrdinalIgnoreCase);
+    public static bool IsSpecialAi(string role) => SpecialAiRoles.Contains(CanonicalSpecialAiRole(role));
     public static string SpecialAiName(string role) => role.Equals("exUsec",StringComparison.OrdinalIgnoreCase)
         ? I18n.T("로그", "游荡者")
         : role.Equals("pmcBot",StringComparison.OrdinalIgnoreCase)

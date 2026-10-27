@@ -15,9 +15,6 @@ public class BossInstance
     public DateTime SpawnedAt { get; set; }
     public string LifeStatus { get; set; } = "AliveEstimated";
     public DateTime? DiedAt { get; set; }
-    public Evidence? SpawnEvidence { get; set; }
-    public Evidence? DisposeEvidence { get; set; }
-    public Evidence? DeathEvidence { get; set; }
 }
 public class BossState
 {
@@ -26,12 +23,9 @@ public class BossState
     public DateTime? At { get; set; }
     public string Position { get; set; } = "";
     public string Zone { get; set; } = "";
-    public string Profile { get; set; } = "";
     public int? SpawnChance { get; set; }
-    public int Count { get; set; }
-    public Evidence? Evidence { get; set; }
-    public List<string> Instances { get; set; } = [];
     public List<BossInstance> LifeInstances { get; set; } = [];
+    public int Count => LifeInstances.Count;
 }
 public class PmcState
 {
@@ -39,14 +33,10 @@ public class PmcState
     public int PlannedWaves { get; set; }
     public int NotPlannedWaves { get; set; }
     public int InitialPlannedWaves { get; set; }
-    public int InitialNotPlannedWaves { get; set; }
     public int AdditionalPlannedWaves { get; set; }
-    public int AdditionalNotPlannedWaves { get; set; }
-    public List<int> SpawnChances { get; set; } = [];
-    public DateTime? LastPlanAt { get; set; }
     public DateTime? FirstSpawnedAt { get; set; }
-    public int Count { get; set; }
     public List<BossInstance> LifeInstances { get; set; } = [];
+    public int Count => LifeInstances.Count;
     public int TotalWaves => PlannedWaves + NotPlannedWaves;
     public string Status => Count > 0 ? "Confirmed" : PlannedWaves > 0 ? "Planned" : TotalWaves > 0 ? "NotPlanned" : "Unknown";
 }
@@ -90,7 +80,7 @@ public class LogReader
     public bool HasAiData { get; private set; }
     public DateTime? LatestAiAt { get; private set; }
     public IReadOnlyList<RaidState> Raids { get; private set; } = [];
-    public RaidState Current => Raids.LastOrDefault() ?? new();
+    public RaidState Current => Raids.Count==0 ? new() : Raids[^1];
     public HashSet<string> ObservedRoles { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public void Reset()
@@ -339,7 +329,6 @@ public class LogReader
                         if(instance.DiedAt==null)
                         {
                             instance.LifeStatus="DeadConfirmed";instance.DiedAt=ev.Time;
-                            instance.DisposeEvidence=disposal.Evidence;instance.DeathEvidence=ev.Evidence;
                         }
                     }
                 }
@@ -354,22 +343,19 @@ public class LogReader
                     if(planned)pmc.PlannedWaves++;else pmc.NotPlannedWaves++;
                     if(current.Started==null)
                     {
-                        if(planned)pmc.InitialPlannedWaves++;else pmc.InitialNotPlannedWaves++;
+                        if(planned)pmc.InitialPlannedWaves++;
                     }
                     else
                     {
-                        if(planned)pmc.AdditionalPlannedWaves++;else pmc.AdditionalNotPlannedWaves++;
+                        if(planned)pmc.AdditionalPlannedWaves++;
                     }
-                    if(ev.SpawnChance is int chance)pmc.SpawnChances.Add(chance);
-                    pmc.LastPlanAt=ev.Time;
                 }
                 else if(ev.Kind=="Active")
                 {
                     string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
                     if(!pmc.LifeInstances.Any(i=>i.Profile==instance))
                     {
-                        pmc.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
-                        pmc.Count=pmc.LifeInstances.Count;
+                        pmc.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
                         if(pmc.FirstSpawnedAt==null)pmc.FirstSpawnedAt=ev.Time;
                     }
                 }
@@ -380,13 +366,11 @@ public class LogReader
                 if(ev.Kind=="Active")
                 {
                     var btr=current.Btr??=new() {Role=ev.Value};
-                    if(btr.Status!="Confirmed") {btr.At=ev.Time;btr.Position=ev.Extra;btr.Profile=ev.Id;btr.Evidence=ev.Evidence;}
+                    if(btr.Status!="Confirmed") {btr.At=ev.Time;btr.Position=ev.Extra;}
                     btr.Status="Confirmed";
                     string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
-                    if(!btr.Instances.Contains(instance))btr.Instances.Add(instance);
                     if(!btr.LifeInstances.Any(i=>i.Profile==instance))
-                        btr.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
-                    btr.Count=btr.Instances.Count;
+                        btr.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
                 }
                 continue;
             }
@@ -396,13 +380,11 @@ public class LogReader
                 {
                     string specialRole=Catalog.CanonicalSpecialAiRole(ev.Value);
                     if(!current.SpecialAis.TryGetValue(specialRole,out var special)) current.SpecialAis[specialRole]=special=new() {Role=specialRole};
-                    if(special.Status!="Confirmed") {special.At=ev.Time;special.Position=ev.Extra;special.Profile=ev.Id;special.Evidence=ev.Evidence;}
+                    if(special.Status!="Confirmed") {special.At=ev.Time;special.Position=ev.Extra;}
                     special.Status="Confirmed";
                     string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
-                    if(!special.Instances.Contains(instance))special.Instances.Add(instance);
                     if(!special.LifeInstances.Any(i=>i.Profile==instance))
-                        special.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,Position=ev.Extra,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
-                    special.Count=special.Instances.Count;
+                        special.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,Position=ev.Extra,SpawnedAt=ev.Time});
                 }
                 continue;
             }
@@ -411,13 +393,11 @@ public class LogReader
                 if(ev.Kind=="Active")
                 {
                     if(!current.Followers.TryGetValue(ev.Value,out var follower)) current.Followers[ev.Value]=follower=new() {Role=ev.Value};
-                    if(follower.Status!="Confirmed") {follower.At=ev.Time;follower.Position=ev.Extra;follower.Profile=ev.Id;follower.Evidence=ev.Evidence;}
+                    if(follower.Status!="Confirmed") {follower.At=ev.Time;follower.Position=ev.Extra;}
                     follower.Status="Confirmed";
                     string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
-                    if(!follower.Instances.Contains(instance))follower.Instances.Add(instance);
                     if(!follower.LifeInstances.Any(i=>i.Profile==instance))
-                        follower.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
-                    follower.Count=follower.Instances.Count;
+                        follower.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
                 }
                 continue;
             }
@@ -435,7 +415,7 @@ public class LogReader
                     if(planned.Status!="Confirmed")
                     {
                         planned.Status=ev.Extra=="True"?"Planned":"NotPlanned";
-                        planned.At=ev.Time;planned.SpawnChance=ev.SpawnChance;planned.Evidence=ev.Evidence;
+                        planned.At=ev.Time;planned.SpawnChance=ev.SpawnChance;
                     }
                 }
                 continue;
@@ -443,13 +423,11 @@ public class LogReader
             if(!current.Bosses.TryGetValue(ev.Value,out var boss)) current.Bosses[ev.Value]=boss=new() { Role=ev.Value };
             if(ev.Kind=="Active")
             {
-                if(boss.Status!="Confirmed") {boss.At=ev.Time;boss.Position=ev.Extra;boss.Profile=ev.Id;boss.Evidence=ev.Evidence;}
+                if(boss.Status!="Confirmed") {boss.At=ev.Time;boss.Position=ev.Extra;}
                 boss.Status="Confirmed";
                 string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
-                if(!boss.Instances.Contains(instance)) boss.Instances.Add(instance);
                 if(!boss.LifeInstances.Any(i=>i.Profile==instance))
-                    boss.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time,SpawnEvidence=ev.Evidence});
-                boss.Count=boss.Instances.Count;
+                    boss.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
             }
         }
         foreach(var raid in raids)

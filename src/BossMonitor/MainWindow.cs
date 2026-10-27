@@ -4,6 +4,7 @@ namespace BossMonitor;
 public class MainWindow : Window
 {
     private static readonly TimeSpan EndedRaidDisplayTime=TimeSpan.FromMinutes(10);
+    private static readonly string[] PmcRoles=["pmcBEAR","pmcUSEC"];
     private AppSettings settings=AppSettings.Load();
     private readonly LogReader reader=new();
     private readonly DispatcherTimer timer=new() {Interval=TimeSpan.FromSeconds(1)};
@@ -84,7 +85,7 @@ public class MainWindow : Window
         Application.Current.SessionEnding+=(s,e)=>{exitRequested=true;};
         Closed+=(s,e)=>{closed=true;timer.Stop();tray.Visible=false;tray.Dispose();};
     }
-    private static FrameworkElement MonitorColumn(string title,StackPanel panel,Thickness margin)
+    private static StackPanel MonitorColumn(string title,StackPanel panel,Thickness margin)
     {
         var column=new StackPanel {Margin=margin};
         column.Children.Add(CompactLabel(title,16,Theme.Text));
@@ -96,6 +97,19 @@ public class MainWindow : Window
         Text=text,FontSize=size,FontWeight=size>=16?FontWeights.SemiBold:FontWeights.Normal,
         Foreground=color??Theme.Text,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,2,0,5)
     };
+    private static Border MonitorCard(UIElement content,Brush accent)=>new()
+    {
+        Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),
+        CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content
+    };
+    private static void AddLifeSummary(StackPanel content,int alive,int dead,bool ended)
+    {
+        string life=ended
+            ? $"{I18n.T("종료 시 사망 미확인","结束时未确认死亡")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}"
+            : $"{I18n.T("생존 추정","推测存活")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}";
+        var label=CompactLabel(life,15,alive>0?Theme.Green:Theme.Muted);
+        label.FontWeight=FontWeights.SemiBold;content.Children.Add(label);
+    }
     private void FitWindowToContent()
     {
         if(!IsLoaded||subpage||WindowState!=WindowState.Normal)return;
@@ -237,16 +251,20 @@ public class MainWindow : Window
         foreach(string role in roles)
         {
             var state=raid.Bosses.GetValueOrDefault(role)??new BossState {Role=role};
-            Brush accent=state.Status=="Confirmed"?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted;
+            bool allDead=state.Status=="Confirmed" && state.LifeInstances.Count>0 && state.LifeInstances.All(i=>i.LifeStatus=="DeadConfirmed");
+            Brush accent=allDead?Theme.Muted:state.Status=="Confirmed"?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted;
             var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
             content.Children.Add(CompactLabel(Catalog.BossName(role,settings),18));
-            content.Children.Add(CompactLabel(Helpers.Status(state.Status)+(raid.Ended?I18n.T(" · 레이드 종료"," · 战局已结束"):""),15,accent));
+            if(state.Status=="Confirmed")
+            {
+                var lifeLabel=CompactLabel(Helpers.LifeStatus(state,raid.Ended),15,allDead?Theme.Muted:Theme.Green);
+                lifeLabel.FontWeight=FontWeights.SemiBold;content.Children.Add(lifeLabel);
+            }
+            else content.Children.Add(CompactLabel(Helpers.Status(state.Status)+(raid.Ended?I18n.T(" · 레이드 종료"," · 战局已结束"):""),15,accent));
             if(state.SpawnChance is int chance)content.Children.Add(CompactLabel($"{I18n.T("스폰 확률", "刷新概率")} {chance}%",13,Theme.Muted));
             if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("기록", "记录")} {state.At:HH:mm:ss}",12,Theme.Muted));
             if(state.Status=="Confirmed")
             {
-                content.Children.Add(CompactLabel(Helpers.LifeStatus(state,raid.Ended),15,
-                    state.LifeInstances.Count>0 && state.LifeInstances.All(i=>i.LifeStatus=="DeadConfirmed")?Theme.Muted:Theme.Green));
                 var followers=raid.Followers.Values.Where(f=>Catalog.FollowerParent(f.Role).Equals(role,StringComparison.OrdinalIgnoreCase)).SelectMany(f=>f.LifeInstances).ToList();
                 if(followers.Count>0)
                 {
@@ -267,14 +285,14 @@ public class MainWindow : Window
                 content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(zoneDisplay==""?I18n.T("확인 불가","无法确认"):zoneDisplay)}\n{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
                 if(state.Count>1)content.Children.Add(CompactLabel($"{I18n.T("활성화 개체", "已激活个体")} {state.Count}",12,Theme.Muted));
             }
-            bosses.Children.Add(new Border {Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
+            bosses.Children.Add(MonitorCard(content,accent));
         }
         FitWindowToContent();
     }
     private static int StatusOrder(string? status)=>status switch {"Confirmed"=>0,"Planned"=>1,"NotPlanned"=>2,_=>3};
     private void RenderPmcs(RaidState raid)
     {
-        var states=new[]{"pmcBEAR","pmcUSEC"}
+        var states=PmcRoles
             .Select(role=>raid.Pmcs.GetValueOrDefault(role)??new PmcState {Role=role})
             .OrderBy(state=>StatusOrder(state.Status))
             .ThenBy(state=>state.Role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase)?0:1)
@@ -286,13 +304,17 @@ public class MainWindow : Window
         }
         foreach(var state in states)
         {
-            Brush accent=state.Status=="Confirmed"?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted;
+            int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
+            int alive=state.Count-dead;
+            Brush accent=state.Count>0?(alive>0?Theme.Green:Theme.Muted):state.Status=="Planned"?Theme.Amber:Theme.Muted;
             string initial=state.InitialPlannedWaves>0
                 ? state.Count>0 ? I18n.T("초기 스폰","初始刷新") : I18n.T("초기 스폰 예정","初始刷新已计划")
                 : I18n.T("초기 스폰 없음","无初始刷新");
             Brush initialColor=state.InitialPlannedWaves==0?Theme.Muted:state.Count>0?Theme.Green:Theme.Amber;
             var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
             content.Children.Add(CompactLabel(state.Role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase)?"BEAR":"USEC",18));
+            if(state.Count>0)
+                AddLifeSummary(content,alive,dead,raid.Ended);
             content.Children.Add(CompactLabel(initial,15,initialColor));
             string additional=raid.Ended
                 ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
@@ -301,17 +323,8 @@ public class MainWindow : Window
                     : I18n.T("추가 스폰 감시 중","正在监测追加刷新");
             content.Children.Add(CompactLabel(additional,13,state.AdditionalPlannedWaves>0?Theme.Amber:Theme.Muted));
             if(state.Count>0)
-            {
-                content.Children.Add(CompactLabel($"{I18n.T("실제 활성화","实际激活")} {state.Count}{I18n.T("명","个")}",14,Theme.Green));
-                int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
-                int alive=state.Count-dead;
-                string life=raid.Ended
-                    ? $"{I18n.T("종료 시 사망 미확인","结束时未确认死亡")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}"
-                    : $"{I18n.T("생존 추정","推测存活")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}";
-                content.Children.Add(CompactLabel(life,13,alive>0?Theme.Green:Theme.Muted));
                 content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.FirstSpawnedAt:HH:mm:ss}",12));
-            }
-            pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
+            pmcs.Children.Add(MonitorCard(content,accent));
         }
     }
     private void RenderSpecialAis(RaidState raid)
@@ -331,14 +344,11 @@ public class MainWindow : Window
             bool confirmed=state.Status=="Confirmed";
             int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
             int alive=state.Count-dead;
-            string life=raid.Ended
-                ? $"{I18n.T("종료 시 사망 미확인","结束时未确认死亡")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}"
-                : $"{I18n.T("생존 추정","推测存活")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}";
             var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
             content.Children.Add(CompactLabel(Catalog.SpecialAiName(state.Role),18));
             if(confirmed)
             {
-                var lifeLabel=CompactLabel(life,15,alive>0?Theme.Green:Theme.Muted);lifeLabel.FontWeight=FontWeights.SemiBold;content.Children.Add(lifeLabel);
+                AddLifeSummary(content,alive,dead,raid.Ended);
                 if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
                 var first=state.LifeInstances.OrderBy(i=>i.SpawnedAt).FirstOrDefault();
                 if(first!=null)
@@ -349,7 +359,7 @@ public class MainWindow : Window
                 }
             }
             else content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
-            pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=confirmed&&alive>0?Theme.Green:Theme.Muted,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
+            pmcs.Children.Add(MonitorCard(content,confirmed&&alive>0?Theme.Green:Theme.Muted));
         }
     }
     // MapGeo POI names are Simplified Chinese, so only substitute them for Chinese users.
@@ -377,7 +387,7 @@ public class MainWindow : Window
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("기록", "记录")} {state.At:HH:mm:ss}",12,Theme.Muted));
         content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {FirstSpawnZone(raid.Map,state.Zone,state.Position)}",12));
         content.Children.Add(CompactLabel($"{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
-        pmcs.Children.Add(new Border {Background=Theme.Card,BorderBrush=Theme.Green,BorderThickness=new Thickness(3,0,0,0),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content});
+        pmcs.Children.Add(MonitorCard(content,Theme.Green));
     }
     private void RenderWaiting(StackPanel target)
     {
