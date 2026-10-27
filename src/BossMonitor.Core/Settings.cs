@@ -124,7 +124,12 @@ public class AppSettings
             added|=settings.Maps.Remove("Sandbox_high");
             added|=settings.CustomRoles.Remove("gifter");
             foreach(var filter in settings.Maps.Values)
-                if(filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0)added=true;
+            {
+                added|=filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0;
+                // Rogue (exUsec) and Raider (pmcBot) are rendered as their own special AI
+                // cards; stale role entries would otherwise appear as raw-ID boss cards.
+                added|=filter.Roles.RemoveAll(r=>Catalog.IsSpecialAi(r))>0;
+            }
             foreach(var entry in Catalog.DefaultBosses)
                 if(!settings.Maps.Keys.Any(id=>id.Equals(entry.Key,StringComparison.OrdinalIgnoreCase)))
                 {
@@ -163,6 +168,12 @@ public class AppSettings
 public static class Catalog
 {
     public static readonly string[] SpecialAiRoles = ["exUsec","pmcBot"];
+    public static readonly Dictionary<string,string[]> MapSpecialAiRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Lighthouse"]=["exUsec"],
+        ["RezervBase"]=["pmcBot"],
+        ["laboratory"]=["pmcBot"],
+    };
     // Standard spawns checked against the Official EFT Wiki on 2026-09-15.
     // Seasonal event spawns are excluded; Cultists retain their time/level conditions.
     public static readonly Dictionary<string,string[]> DefaultBosses = new(StringComparer.OrdinalIgnoreCase)
@@ -230,6 +241,7 @@ public static class Catalog
         return LocalizedMaps.GetValueOrDefault(canonical, canonical);
     }
     public static string CanonicalSpecialAiRole(string role) => role.Equals("exUsecFree",StringComparison.OrdinalIgnoreCase) ? "exUsec" : role;
+    public static string[] SpecialAiRolesForMap(string map) => MapSpecialAiRoles.GetValueOrDefault(CanonicalMapId(map),[]);
     public static bool IsSpecialAi(string role) => SpecialAiRoles.Contains(CanonicalSpecialAiRole(role),StringComparer.OrdinalIgnoreCase);
     public static string SpecialAiName(string role) => role.Equals("exUsec",StringComparison.OrdinalIgnoreCase)
         ? I18n.T("로그", "游荡者")
