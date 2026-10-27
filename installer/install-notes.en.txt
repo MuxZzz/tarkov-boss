@@ -1,9 +1,10 @@
-Tarkov Boss Monitor 1.0.17
+Tarkov Boss Monitor 1.0.18
 
 A Windows x64 app that detects boss spawns in official local PvE raids.
 
 - Automatically finds the Tarkov game folder during setup, with manual selection available.
 - Detects the raid map and lets you choose bosses to monitor for each map.
+- Shows Rogue counts on Lighthouse and Raider counts on Reserve and The Lab, including estimated survival status.
 - Shows the number of AI combatants killed by the player in the current raid.
 - Can be installed while the game is running. Required logging settings are applied after the game exits.
 - Cleans game logs older than seven days every day at 04:00, while protecting active logs and the newest session.
