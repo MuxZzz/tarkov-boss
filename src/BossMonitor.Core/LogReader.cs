@@ -15,6 +15,7 @@ public class BossInstance
     public DateTime SpawnedAt { get; set; }
     public string LifeStatus { get; set; } = "AliveEstimated";
     public DateTime? DiedAt { get; set; }
+    public string DeathPosition { get; set; } = "";
 }
 public class BossState
 {
@@ -57,6 +58,7 @@ public class RaidState
     public Dictionary<string,BossState> Followers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,PmcState> Pmcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,BossState> SpecialAis { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public BossState Scavs { get; set; } = new() { Role="assault" };
     public BossState? Btr { get; set; }
     public List<DateTime> BtrReadyAt { get; set; } = [];
     public List<DateTime> BtrTaxiAt { get; set; } = [];
@@ -207,7 +209,8 @@ public class LogReader
         {kind="Hit";botId=m.Groups[1].Value;value=m.Groups[2].Value.Trim();}
         else if(line.Contains("|aiData|") && (m=Regex.Match(line,@"\bbot dispose:(\d+)\b")).Success)
         {kind="Dispose";botId=m.Groups[1].Value;}
-        else if(line.Contains("|aiData|") && Regex.IsMatch(line,@"\bBotDied pos:\([^)]+\)")) kind="Died";
+        else if(line.Contains("|aiData|") && (m=Regex.Match(line,@"\bBotDied pos:\(([^)]+)\)")).Success)
+        {kind="Died";extra=m.Groups[1].Value;}
         else if(line.Contains("|aiData|Group set boss.") &&
             (m=Regex.Match(line,@"\bgroupName:(\S+)\s+\[Boss\]\s+botBoss\.Id:(\d+)\s+bossType:(\w+)\b")).Success)
         {
@@ -230,6 +233,7 @@ public class LogReader
     private static IEnumerable<BossInstance> LifeInstances(RaidState raid)
         => raid.Bosses.Values.SelectMany(b=>b.LifeInstances).Concat(raid.Followers.Values.SelectMany(f=>f.LifeInstances)).Concat(raid.Pmcs.Values.SelectMany(p=>p.LifeInstances))
             .Concat(raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances))
+            .Concat(raid.Scavs.LifeInstances)
             .Concat(raid.Btr?.LifeInstances??[]);
     private List<RaidState> Rebuild(AppSettings settings)
     {
@@ -328,7 +332,7 @@ public class LogReader
                         var instance=matches[0];
                         if(instance.DiedAt==null)
                         {
-                            instance.LifeStatus="DeadConfirmed";instance.DiedAt=ev.Time;
+                            instance.LifeStatus="DeadConfirmed";instance.DiedAt=ev.Time;instance.DeathPosition=ev.Extra;
                         }
                     }
                 }
@@ -358,6 +362,20 @@ public class LogReader
                         pmc.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
                         if(pmc.FirstSpawnedAt==null)pmc.FirstSpawnedAt=ev.Time;
                     }
+                }
+                continue;
+            }
+            // The supplied local PvE logs identify ordinary Scavs as role:assault.
+            if(ev.Value.Equals("assault",StringComparison.OrdinalIgnoreCase) && !current.Ended)
+            {
+                if(ev.Kind=="Active")
+                {
+                    var scav=current.Scavs;
+                    if(scav.Status!="Confirmed") {scav.At=ev.Time;scav.Position=ev.Extra;}
+                    scav.Status="Confirmed";
+                    string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+                    if(!scav.LifeInstances.Any(i=>i.Profile==instance))
+                        scav.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,Position=ev.Extra,SpawnedAt=ev.Time});
                 }
                 continue;
             }
@@ -472,6 +490,8 @@ public class LogReader
             foreach(var instance in raid.Pmcs.Values.SelectMany(p=>p.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         if(raid.Ended)
             foreach(var instance in raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
+        if(raid.Ended)
+            foreach(var instance in raid.Scavs.LifeInstances.Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         }
         return raids;
     }

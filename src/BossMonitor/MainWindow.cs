@@ -236,7 +236,7 @@ public class MainWindow : Window
             .OrderBy(role=>StatusOrder(raid.Bosses.GetValueOrDefault(role)?.Status))
             .ThenBy(role=>Catalog.BossName(role,settings),StringComparer.CurrentCultureIgnoreCase).ToList();
         var btrLocation=BtrTracker.Estimate(raid,DateTime.Now);
-        string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Followers)+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.SpecialAis)+System.Text.Json.JsonSerializer.Serialize(raid.Btr)+System.Text.Json.JsonSerializer.Serialize(raid.BtrReadyAt)+System.Text.Json.JsonSerializer.Serialize(raid.BtrTaxiAt)+btrLocation?.Key;
+        string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Followers)+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.SpecialAis)+System.Text.Json.JsonSerializer.Serialize(raid.Scavs)+System.Text.Json.JsonSerializer.Serialize(raid.Btr)+System.Text.Json.JsonSerializer.Serialize(raid.BtrReadyAt)+System.Text.Json.JsonSerializer.Serialize(raid.BtrTaxiAt)+btrLocation?.Key;
         if(signature==rendering)return;rendering=signature;bosses.Children.Clear();pmcs.Children.Clear();waiting.Children.Clear();
         if(raid.Map=="")
         {
@@ -245,6 +245,7 @@ public class MainWindow : Window
         waiting.Visibility=Visibility.Collapsed;raidColumns.Visibility=Visibility.Visible;
         RenderPmcs(raid);
         RenderSpecialAis(raid);
+        RenderScavs(raid);
         RenderBtr(raid,btrLocation);
         if(filter.Mode=="off"){bosses.Children.Add(Theme.Label(I18n.T("이 맵은 감시하지 않도록 설정되어 있습니다.","此地图已设置为不监控。"),16,Theme.Muted));FitWindowToContent();return;}
         if(roles.Count==0){bosses.Children.Add(Theme.Label(filter.Mode=="selected"?I18n.T("선택된 보스가 없습니다. 설정에서 보스를 선택해 주세요.","未选择首领，请在设置中选择。"):I18n.T("모든 보스 감시 중 · 보스 판정 기록 대기","正在监控所有首领 · 等待判定记录"),16,Theme.Muted));FitWindowToContent();return;}
@@ -283,6 +284,12 @@ public class MainWindow : Window
                     if(poi!="")zoneDisplay=poi;
                 }
                 content.Children.Add(CompactLabel($"{I18n.T("최초 구역", "首次区域")}: {(zoneDisplay==""?I18n.T("확인 불가","无法确认"):zoneDisplay)}\n{I18n.T("최초 좌표", "首次坐标")}: {(state.Position==""?I18n.T("확인 불가","无法确认"):state.Position)}",12));
+                foreach(var instance in state.LifeInstances.Where(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null))
+                {
+                    string identity=state.Count>1?$"{I18n.T("개체", "个体")} {instance.BotId} · ":"";
+                    string position=instance.DeathPosition==""?I18n.T("확인 불가","无法确认"):instance.DeathPosition;
+                    content.Children.Add(CompactLabel($"{identity}{I18n.T("사망 좌표", "死亡坐标")}: {position}",12));
+                }
                 if(state.Count>1)content.Children.Add(CompactLabel($"{I18n.T("활성화 개체", "已激活个体")} {state.Count}",12,Theme.Muted));
             }
             bosses.Children.Add(MonitorCard(content,accent));
@@ -326,6 +333,23 @@ public class MainWindow : Window
                 content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.FirstSpawnedAt:HH:mm:ss}",12));
             pmcs.Children.Add(MonitorCard(content,accent));
         }
+    }
+    private void RenderScavs(RaidState raid)
+    {
+        if(Catalog.CanonicalMapId(raid.Map).Equals("laboratory",StringComparison.OrdinalIgnoreCase))return;
+        var state=raid.Scavs;
+        int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
+        int alive=state.Count-dead;
+        var title=CompactLabel("Scav",16,Theme.Text);title.Margin=new Thickness(0,10,0,5);pmcs.Children.Add(title);
+        var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
+        content.Children.Add(CompactLabel("Scav",18));
+        if(state.Count==0)content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
+        AddLifeSummary(content,alive,dead,raid.Ended);
+        content.Children.Add(CompactLabel(raid.Ended
+            ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
+            : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,Theme.Muted));
+        if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
+        pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
     }
     private void RenderSpecialAis(RaidState raid)
     {

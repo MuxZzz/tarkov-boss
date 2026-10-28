@@ -91,7 +91,7 @@ public static class I18n
         ["지원하지 않는 경로 확인 작업입니다."]="Unsupported path-check operation.", ["지원하지 않는 작업입니다."]="Unsupported operation.", ["진단 내보내기"]="Export diagnostics",
         ["진단 파일"]="Diagnostic file", ["창 열기"]="Open window", ["처음 시작하기"]="Get started", ["처음 시작하기 · Tarkov Boss Monitor"]="Get started · Tarkov Boss Monitor",
         ["체크하면 닫기(X)로 숨긴 뒤에도 감시합니다. 해제하면 창을 닫을 때 종료합니다.\n트레이로 숨길 때 안내하고, 숨겨진 상태에서 보스 스폰 확인 시 Windows 알림을 표시합니다."]="When enabled, closing the window hides it to the tray and monitoring continues. When disabled, closing the window exits the app.\nA notification appears when hidden to the tray and when a monitored boss spawn is confirmed while hidden.",
-        ["최근 결과"]="Last result", ["최초 구역"]="Initial zone", ["최초 좌표"]="Initial coordinates", ["타르코프 게임 설치 폴더 선택"]="Select the Escape from Tarkov installation folder",
+        ["최근 결과"]="Last result", ["최초 구역"]="Initial zone", ["최초 좌표"]="Initial coordinates", ["사망 좌표"]="Death coordinates", ["타르코프 게임 설치 폴더 선택"]="Select the Escape from Tarkov installation folder",
         ["현재 위치: "]="Current location: ", ["레이드 종료"]="Raid ended",
         ["첫 정류장"]="first stop", ["{0} 방면 이동 중 (추정)"]="Traveling toward {0} (estimated)", ["{0} 정차 중 (추정)"]="Stopped at {0} (estimated)",
         ["아직 출발 준비 신호가 없습니다."]="No departure-ready signal has been detected yet.", ["{0} 출발 · {1}/{2} 방면 (추정)"]="Departed {0} · Heading toward {1}/{2} (estimated)",
