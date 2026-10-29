@@ -10,6 +10,9 @@ public class BossInstance
 {
     public string Profile { get; set; } = "";
     public string BotId { get; set; } = "";
+    // PMC_DIFFICULTY_BEGIN: PMC difficulty classification
+    public string PmcDifficulty { get; set; } = "";
+    // PMC_DIFFICULTY_END
     public string Position { get; set; } = "";
     public string Zone { get; set; } = "";
     public DateTime SpawnedAt { get; set; }
@@ -59,6 +62,9 @@ public class RaidState
     public Dictionary<string,PmcState> Pmcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string,BossState> SpecialAis { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public BossState Scavs { get; set; } = new() { Role="assault" };
+    // HALLOWEEN_EVENT_BEGIN
+    public BossState InfectedScreamer { get; set; } = new() { Role="infectedScreamer" };
+    // HALLOWEEN_EVENT_END
     public BossState? Btr { get; set; }
     public List<DateTime> BtrReadyAt { get; set; } = [];
     public List<DateTime> BtrTaxiAt { get; set; } = [];
@@ -189,6 +195,14 @@ public class LogReader
         }
         else if(line.Contains("|application|GameStarted:")) kind="Start";
         else if(line.Contains("|backend|") && line.Contains("---> Request") && line.Contains("client/match/local/end")) kind="End";
+        // PMC_DIFFICULTY_BEGIN: link spawn-data IDs to PMC profiles, not runtime bot IDs.
+        else if(line.Contains("|aiData|Profile for bot typeA taken") &&
+            (m=Regex.Match(line,@"\bdataId:(\d+):\s+profileId:(\w+)\b")).Success)
+        {kind="PmcProfileTaken";value=m.Groups[1].Value;id=m.Groups[2].Value;}
+        else if(line.Contains("|aiData|Activate bots:") &&
+            (m=Regex.Match(line,@"\bType:(pmcBEAR|pmcUSEC)\s+BotDifficulty:(\w+)\s+id:\d+\s+spawnPoints:1\s+id:(\d+)\b",RegexOptions.IgnoreCase)).Success)
+        {kind="PmcDifficultySpawn";value=m.Groups[1].Value;extra=m.Groups[2].Value;id=m.Groups[3].Value;}
+        // PMC_DIFFICULTY_END
         else if(line.Contains("|aiData|") && (m=Regex.Match(line,@"Init Boss wave:(\w+) ShallSpawn:(True|False)\b(?: BossChance:(\d+))?")).Success)
         {
             kind="Plan";value=m.Groups[1].Value;extra=m.Groups[2].Value;
@@ -227,6 +241,9 @@ public class LogReader
         if(kind=="Plan" && IsPmc(value)) key+=$"|{evidence.File}|{evidence.Line}";
         // Keep death pairs in their original file; output can duplicate aiData records.
         if(kind is "Dispose" or "Died") key+=$"|{evidence.File}|{evidence.Line}";
+        // PMC_DIFFICULTY_BEGIN: preserve separate profile and spawn rows for safe pairing.
+        if(kind is "PmcProfileTaken" or "PmcDifficultySpawn") key+=$"|{evidence.File}|{evidence.Line}";
+        // PMC_DIFFICULTY_END
         return new(time,kind,value,extra,id,evidence,key,botId,spawnChance);
     }
     private static bool IsPmc(string role) => role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase) || role.Equals("pmcUSEC",StringComparison.OrdinalIgnoreCase);
@@ -234,6 +251,9 @@ public class LogReader
         => raid.Bosses.Values.SelectMany(b=>b.LifeInstances).Concat(raid.Followers.Values.SelectMany(f=>f.LifeInstances)).Concat(raid.Pmcs.Values.SelectMany(p=>p.LifeInstances))
             .Concat(raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances))
             .Concat(raid.Scavs.LifeInstances)
+            // HALLOWEEN_EVENT_BEGIN
+            .Concat(raid.InfectedScreamer.LifeInstances)
+            // HALLOWEEN_EVENT_END
             .Concat(raid.Btr?.LifeInstances??[]);
     private List<RaidState> Rebuild(AppSettings settings)
     {
@@ -242,6 +262,11 @@ public class LogReader
         var pendingDeaths=new Dictionary<string,LogEvent>(StringComparer.OrdinalIgnoreCase);
         var activeProfiles=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
         var lastHitByBot=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        // PMC_DIFFICULTY_BEGIN: temporary per-raid profile/difficulty associations.
+        RaidState? difficultyRaid=null;
+        var difficultyProfiles=new Dictionary<(string File,string DataId),LogEvent>();
+        var profileDifficulties=new Dictionary<string,(string Role,string Difficulty)>(StringComparer.OrdinalIgnoreCase);
+        // PMC_DIFFICULTY_END
         string localPlayer="";
         var ordered=events.OrderBy(e=>e.Time).ThenBy(e=>e.Kind=="Match"?0:e.Kind=="Map"?1:2).ThenBy(e=>e.Evidence.File,StringComparer.OrdinalIgnoreCase).ThenBy(e=>e.Evidence.Line).ToList();
         foreach(var ev in ordered)
@@ -256,6 +281,33 @@ public class LogReader
                 current=new() { Boundary=ev.Time,Key=$"{Session}|{ev.Time:O}" }; raids.Add(current); continue;
             }
             if(raids.Count==0) { current=new() { Boundary=ev.Time,Key=$"{Session}|{ev.Time:O}" }; raids.Add(current); }
+            // PMC_DIFFICULTY_BEGIN: discard associations at raid/map boundaries.
+            if(!ReferenceEquals(difficultyRaid,current))
+            {difficultyRaid=current;difficultyProfiles.Clear();profileDifficulties.Clear();}
+            if(ev.Kind=="PmcProfileTaken")
+            {
+                if(!current.Ended) difficultyProfiles[(ev.Evidence.File,ev.Value)]=ev;
+                continue;
+            }
+            if(ev.Kind=="PmcDifficultySpawn")
+            {
+                if(!current.Ended && difficultyProfiles.Remove((ev.Evidence.File,ev.Id),out var profile) &&
+                    ev.Time>=profile.Time && (ev.Time-profile.Time).TotalSeconds<=2 &&
+                    ev.Evidence.Line>profile.Evidence.Line && ev.Evidence.Line-profile.Evidence.Line<=64)
+                {
+                    var association=(Role:ev.Value,Difficulty:ev.Extra.ToLowerInvariant());
+                    if(profileDifficulties.TryGetValue(profile.Id,out var previous) &&
+                        (!previous.Role.Equals(association.Role,StringComparison.OrdinalIgnoreCase) || previous.Difficulty!=association.Difficulty))
+                    {
+                        profileDifficulties[profile.Id]=(Role:"",Difficulty:"");
+                        foreach(var instance in current.Pmcs.Values.SelectMany(p=>p.LifeInstances).Where(i=>i.Profile.Equals(profile.Id,StringComparison.OrdinalIgnoreCase)))
+                            instance.PmcDifficulty="";
+                    }
+                    else profileDifficulties[profile.Id]=association;
+                }
+                continue;
+            }
+            // PMC_DIFFICULTY_END
             if(ev.Kind=="GameTime")
             {
                 // A second GameDateTime is logged in the lobby after extraction. Keep the
@@ -360,6 +412,12 @@ public class LogReader
                     if(!pmc.LifeInstances.Any(i=>i.Profile==instance))
                     {
                         pmc.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,SpawnedAt=ev.Time});
+                        // PMC_DIFFICULTY_BEGIN: unknown/unsupported difficulties remain unclassified.
+                        if(profileDifficulties.TryGetValue(instance,out var difficulty) &&
+                            difficulty.Role.Equals(ev.Value,StringComparison.OrdinalIgnoreCase) &&
+                            difficulty.Difficulty is "easy" or "normal" or "hard" or "impossible")
+                            pmc.LifeInstances[^1].PmcDifficulty=difficulty.Difficulty;
+                        // PMC_DIFFICULTY_END
                         if(pmc.FirstSpawnedAt==null)pmc.FirstSpawnedAt=ev.Time;
                     }
                 }
@@ -379,6 +437,21 @@ public class LogReader
                 }
                 continue;
             }
+            // HALLOWEEN_EVENT_BEGIN
+            if(ev.Value.Equals("infectedScreamer",StringComparison.OrdinalIgnoreCase) && !current.Ended)
+            {
+                if(ev.Kind=="Active")
+                {
+                    var infected=current.InfectedScreamer;
+                    if(infected.Status!="Confirmed") {infected.At=ev.Time;infected.Position=ev.Extra;}
+                    infected.Status="Confirmed";
+                    string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
+                    if(!infected.LifeInstances.Any(i=>i.Profile==instance))
+                        infected.LifeInstances.Add(new() {Profile=instance,BotId=ev.BotId,Position=ev.Extra,SpawnedAt=ev.Time});
+                }
+                continue;
+            }
+            // HALLOWEEN_EVENT_END
             if(ev.Value.Equals("shooterBTR",StringComparison.OrdinalIgnoreCase) && !current.Ended)
             {
                 if(ev.Kind=="Active")
@@ -492,6 +565,10 @@ public class LogReader
             foreach(var instance in raid.SpecialAis.Values.SelectMany(s=>s.LifeInstances).Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         if(raid.Ended)
             foreach(var instance in raid.Scavs.LifeInstances.Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
+        // HALLOWEEN_EVENT_BEGIN
+        if(raid.Ended)
+            foreach(var instance in raid.InfectedScreamer.LifeInstances.Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
+        // HALLOWEEN_EVENT_END
         }
         return raids;
     }

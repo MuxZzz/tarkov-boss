@@ -237,6 +237,9 @@ public class MainWindow : Window
             .ThenBy(role=>Catalog.BossName(role,settings),StringComparer.CurrentCultureIgnoreCase).ToList();
         var btrLocation=BtrTracker.Estimate(raid,DateTime.Now);
         string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Followers)+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.SpecialAis)+System.Text.Json.JsonSerializer.Serialize(raid.Scavs)+System.Text.Json.JsonSerializer.Serialize(raid.Btr)+System.Text.Json.JsonSerializer.Serialize(raid.BtrReadyAt)+System.Text.Json.JsonSerializer.Serialize(raid.BtrTaxiAt)+btrLocation?.Key;
+        // HALLOWEEN_EVENT_BEGIN
+        signature+=System.Text.Json.JsonSerializer.Serialize(raid.InfectedScreamer);
+        // HALLOWEEN_EVENT_END
         if(signature==rendering)return;rendering=signature;bosses.Children.Clear();pmcs.Children.Clear();waiting.Children.Clear();
         if(raid.Map=="")
         {
@@ -246,6 +249,9 @@ public class MainWindow : Window
         RenderPmcs(raid);
         RenderSpecialAis(raid);
         RenderScavs(raid);
+        // HALLOWEEN_EVENT_BEGIN
+        RenderHalloweenInfected(raid,raid.InfectedScreamer,I18n.IsChinese?"感染者":I18n.IsKorean?"감염자":"Infected");
+        // HALLOWEEN_EVENT_END
         RenderBtr(raid,btrLocation);
         if(filter.Mode=="off"){bosses.Children.Add(Theme.Label(I18n.T("이 맵은 감시하지 않도록 설정되어 있습니다.","此地图已设置为不监控。"),16,Theme.Muted));FitWindowToContent();return;}
         if(roles.Count==0){bosses.Children.Add(Theme.Label(filter.Mode=="selected"?I18n.T("선택된 보스가 없습니다. 설정에서 보스를 선택해 주세요.","未选择首领，请在设置中选择。"):I18n.T("모든 보스 감시 중 · 보스 판정 기록 대기","正在监控所有首领 · 等待判定记录"),16,Theme.Muted));FitWindowToContent();return;}
@@ -322,6 +328,16 @@ public class MainWindow : Window
             content.Children.Add(CompactLabel(state.Role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase)?"BEAR":"USEC",18));
             if(state.Count>0)
                 AddLifeSummary(content,alive,dead,raid.Ended);
+            // PMC_DIFFICULTY_BEGIN: estimated surviving impossible-difficulty PMCs.
+            if(state.Count>0)
+            {
+                int impossible=state.LifeInstances.Count(i=>i.PmcDifficulty=="impossible" && (i.LifeStatus!="DeadConfirmed" || i.DiedAt==null));
+                string text=raid.Ended
+                    ? (I18n.IsChinese?$"Impossible 难度 · 结束时死亡未确认 {impossible} 人":I18n.IsKorean?$"Impossible 난이도 · 종료 시 사망 미확인 {impossible}명":$"Impossible difficulty · Death unconfirmed at raid end: {impossible}")
+                    : (I18n.IsChinese?$"Impossible 难度 · 推测存活 {impossible} 人":I18n.IsKorean?$"Impossible 난이도 · 생존 추정 {impossible}명":$"Impossible difficulty · Estimated alive: {impossible}");
+                content.Children.Add(CompactLabel(text,13,Theme.Muted));
+            }
+            // PMC_DIFFICULTY_END
             content.Children.Add(CompactLabel(initial,15,initialColor));
             string additional=raid.Ended
                 ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
@@ -351,6 +367,24 @@ public class MainWindow : Window
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
         pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
     }
+    // HALLOWEEN_EVENT_BEGIN
+    private void RenderHalloweenInfected(RaidState raid,BossState state,string name)
+    {
+        if(Catalog.CanonicalMapId(raid.Map).Equals("laboratory",StringComparison.OrdinalIgnoreCase))return;
+        int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
+        int alive=state.Count-dead;
+        var title=CompactLabel(name,16,Theme.Text);title.Margin=new Thickness(0,10,0,5);pmcs.Children.Add(title);
+        var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
+        content.Children.Add(CompactLabel(name,18));
+        if(state.Count==0)content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
+        AddLifeSummary(content,alive,dead,raid.Ended);
+        content.Children.Add(CompactLabel(raid.Ended
+            ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
+            : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,Theme.Muted));
+        if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
+        pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
+    }
+    // HALLOWEEN_EVENT_END
     private void RenderSpecialAis(RaidState raid)
     {
         var roles=Catalog.SpecialAiRolesForMap(raid.Map)
