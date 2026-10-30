@@ -8,8 +8,6 @@ A Windows x64 app that detects boss spawns in official PvE raids running locally
 
 - **Interchange Killa runs**: Check whether Killa is planned to spawn and actually activates. Once confirmed, use his initial zone to narrow your search.
 - **Night Factory Cultist runs**: Avoid repeatedly searching the entire map in raids where the Cultist Priest did not spawn.
-- **Boss quests and farming**: Monitor only the bosses you need on each map and distinguish raids with no planned spawn from raids still waiting for activation.
-- **Repeated local PvE raids**: See the boss name, spawn chance, detection time, initial zone, and estimated survival state in one place.
 
 `Planned` means the game log selected the boss for spawning. `Confirmed` means an actual boss activation record was detected. Initial zones and coordinates are not current positions.
 
@@ -31,7 +29,7 @@ The installer is not code-signed, so Windows SmartScreen may display a warning.
 
 ## Screenshot
 
-<img src="./screenshot.png" alt="Tarkov Boss Monitor boss spawn detection screen" width="600">
+<img src="./screenshot_2.png" alt="Tarkov Boss Monitor boss, event, and AI monitoring screen" width="600">
 
 ## Launcher repair warning
 
@@ -61,6 +59,8 @@ Requirements: Windows 10 or later, .NET 8 SDK, and Inno Setup 6.
 ```
 
 The installer is created in `outputs/installer`.
+
+Run `.\test.ps1` to execute the regression tests without installing the game. See the [testing guide](tests/README.md) for fixture details and instructions for checking archived original logs.
 
 ## License
 
