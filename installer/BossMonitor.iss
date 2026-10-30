@@ -1,4 +1,4 @@
-#define AppVersion "1.0.18"
+#define AppVersion "1.0.19"
 
 [Setup]
 AppId={{3B92D97F-CBF0-4938-9687-B86AF284864F}
@@ -23,7 +23,9 @@ WizardStyle=modern
 LanguageDetectionMethod=uilanguage
 CloseApplications=yes
 RestartApplications=no
-AppMutex=Local\TarkovBossMonitor-GUI
+; Let Restart Manager offer automatic closing during updates. Keep the original
+; running-app guard for uninstall, which does not use CloseApplications.
+AppMutex={code:UninstallMutex}
 VersionInfoDescription=Tarkov Boss Monitor Installer
 VersionInfoVersion={#AppVersion}.0
 
@@ -31,6 +33,20 @@ VersionInfoVersion={#AppVersion}.0
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"; InfoBeforeFile: "install-notes.txt"
 Name: "chinesesimplified"; MessagesFile: "compiler:Default.isl,ChineseSimplified.isl"; InfoBeforeFile: "install-notes.zh-CN.txt"
 Name: "english"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "install-notes.en.txt"
+
+[Messages]
+korean.ApplicationsFound=설치에 필요한 파일을 사용 중인 프로그램이 있습니다.%n아래 프로그램을 자동으로 종료하고 설치를 계속할까요?
+korean.CloseApplications=앱을 자동 종료하고 설치 계속(&A)
+korean.DontCloseApplications=자동 종료하지 않음(&D)
+korean.ErrorCloseApplications=일부 프로그램을 종료하지 못했습니다. 해당 프로그램을 직접 종료한 뒤 다시 시도해 주세요.
+chinesesimplified.ApplicationsFound=以下程序正在使用安装所需更新的文件。%n是否自动关闭这些程序并继续安装？
+chinesesimplified.CloseApplications=自动关闭程序并继续安装(&A)
+chinesesimplified.DontCloseApplications=不自动关闭程序(&D)
+chinesesimplified.ErrorCloseApplications=无法关闭部分程序。请手动关闭后重试。
+english.ApplicationsFound=The following applications are using files that need to be updated.%nWould you like to close them automatically and continue installation?
+english.CloseApplications=Automatically close the applications and continue(&A)
+english.DontCloseApplications=Do not close the applications automatically(&D)
+english.ErrorCloseApplications=Some applications could not be closed. Close them manually and try again.
 
 [CustomMessages]
 korean.DesktopShortcut=바탕화면 바로가기 만들기
@@ -126,6 +142,14 @@ var
   GamePage: TInputDirWizardPage;
   GameCandidates: TNewComboBox;
   ProbeReady: Boolean;
+
+function UninstallMutex(Param: String): String;
+begin
+  if IsUninstaller then
+    Result := 'Local\TarkovBossMonitor-GUI'
+  else
+    Result := '';
+end;
 
 function RunProbe(const Params: String; var Code: Integer): Boolean;
 begin

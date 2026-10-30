@@ -17,6 +17,7 @@ A Windows x64 app that detects boss spawns in official PvE raids running locally
 
 - Detects the current map from raid logs
 - Shows activated, estimated-alive, and confirmed-dead Rogue and Raider counts
+- Tracks infected and infected Tagilla separately in the Events section, including infected Tagilla's spawn chance, spawn decision, and life state after activation
 - Lets you choose bosses to monitor for each map
 - Continuously estimates the Woods BTR's current stop and travel segment from log signals
 - Supports installation while the game is running

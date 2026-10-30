@@ -3,13 +3,19 @@ using System.Windows.Threading;
 namespace BossMonitor;
 public class MainWindow : Window
 {
+    private const double DefaultWindowWidth=900,DefaultWindowHeight=700;
     private static readonly TimeSpan EndedRaidDisplayTime=TimeSpan.FromMinutes(10);
     private static readonly string[] PmcRoles=["pmcBEAR","pmcUSEC"];
     private AppSettings settings=AppSettings.Load();
     private readonly LogReader reader=new();
     private readonly DispatcherTimer timer=new() {Interval=TimeSpan.FromSeconds(1)};
     private readonly TextBlock map=Theme.Label(I18n.T("게임 경로 설정 대기","等待设置游戏路径"),26),connection=Theme.Label("",13,Theme.Muted),raidLabel=Theme.Label("",13,Theme.Muted);
+    private readonly TextBlock playerKillsCaption=new() {FontSize=13,Foreground=Theme.Muted,TextAlignment=TextAlignment.Right,Margin=new Thickness(0,0,0,2)};
+    private readonly TextBlock playerKills=new() {FontSize=32,FontWeight=FontWeights.SemiBold,Foreground=Theme.Green,TextAlignment=TextAlignment.Right};
+    private readonly Border killsBadge=new() {Visibility=Visibility.Collapsed,BorderBrush=Theme.Color("#D5E0D9"),BorderThickness=new Thickness(1,0,0,0),Padding=new Thickness(18,0,0,0),Margin=new Thickness(24,0,0,0),VerticalAlignment=VerticalAlignment.Center};
     private readonly StackPanel bosses=new();
+    private readonly StackPanel eventMobs=new();
+    private readonly StackPanel eventSection=new() {Margin=new Thickness(0,14,0,0),Visibility=Visibility.Collapsed};
     private readonly StackPanel pmcs=new();
     private readonly StackPanel waiting=new();
     private readonly Grid raidColumns=new();
@@ -39,7 +45,7 @@ public class MainWindow : Window
             }
         }
         catch { }
-        Title="Tarkov Boss Monitor";Width=900;Height=700;MinWidth=620;MinHeight=450;Topmost=settings.AlwaysOnTop;Theme.WindowIcon(this);
+        Title="Tarkov Boss Monitor";Width=DefaultWindowWidth;Height=DefaultWindowHeight;MinWidth=620;MinHeight=450;Topmost=settings.AlwaysOnTop;Theme.WindowIcon(this);
         var root=new DockPanel {Margin=new Thickness(24)};monitor=root;Content=root;
         var header=new StackPanel();DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
         var branding=new Grid();
@@ -50,17 +56,13 @@ public class MainWindow : Window
         version.HorizontalAlignment=HorizontalAlignment.Right;version.VerticalAlignment=VerticalAlignment.Center;Grid.SetColumn(version,1);branding.Children.Add(version);
         header.Children.Add(branding);
         raidLabel.Visibility=Visibility.Collapsed;connection.Visibility=Visibility.Collapsed;
-        header.Children.Add(map);header.Children.Add(raidLabel);header.Children.Add(connection);header.Children.Add(updateBanner);
+        header.Children.Add(CreateRaidHeader());header.Children.Add(connection);header.Children.Add(updateBanner);
         var footer=new StackPanel();DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
         var actions=new WrapPanel();
         pause.Click+=(s,e)=>TogglePause();actions.Children.Add(pause);
         actions.Children.Add(Theme.Action(I18n.T("설정","设置"),(s,e)=>OpenSettings()));
         actions.Children.Add(Theme.Action(I18n.T("트레이로","最小化到托盘"),(s,e)=>HideToTray()));footer.Children.Add(actions);
-        raidColumns.ColumnDefinitions.Add(new() {Width=new GridLength(1,GridUnitType.Star)});
-        raidColumns.ColumnDefinitions.Add(new() {Width=new GridLength(1,GridUnitType.Star)});
-        var bossColumn=MonitorColumn(I18n.T("보스","首领"),bosses,new Thickness(0,0,8,0));
-        var pmcColumn=MonitorColumn("AI PMC",pmcs,new Thickness(8,0,0,0));Grid.SetColumn(pmcColumn,1);
-        raidColumns.Children.Add(bossColumn);raidColumns.Children.Add(pmcColumn);
+        BuildRaidColumns();
         var monitorBody=new Grid {Margin=new Thickness(0,8,0,6)};
         monitorBody.Children.Add(raidColumns);monitorBody.Children.Add(waiting);
         monitorScroll.Content=monitorBody;root.Children.Add(monitorScroll);
@@ -84,6 +86,27 @@ public class MainWindow : Window
         };
         Application.Current.SessionEnding+=(s,e)=>{exitRequested=true;};
         Closed+=(s,e)=>{closed=true;timer.Stop();tray.Visible=false;tray.Dispose();};
+    }
+    private Grid CreateRaidHeader()
+    {
+        var header=new Grid();
+        header.ColumnDefinitions.Add(new() {Width=new GridLength(1,GridUnitType.Star)});
+        header.ColumnDefinitions.Add(new() {Width=GridLength.Auto});
+        var details=new StackPanel();details.Children.Add(map);details.Children.Add(raidLabel);header.Children.Add(details);
+        var kills=new StackPanel {MinWidth=64,HorizontalAlignment=HorizontalAlignment.Right};
+        kills.Children.Add(playerKillsCaption);kills.Children.Add(playerKills);
+        killsBadge.Child=kills;Grid.SetColumn(killsBadge,1);header.Children.Add(killsBadge);
+        return header;
+    }
+    private void BuildRaidColumns()
+    {
+        raidColumns.ColumnDefinitions.Add(new() {Width=new GridLength(1,GridUnitType.Star)});
+        raidColumns.ColumnDefinitions.Add(new() {Width=new GridLength(1,GridUnitType.Star)});
+        var bossColumn=MonitorColumn(I18n.T("보스","首领"),bosses,new Thickness(0,0,8,0));
+        eventSection.Children.Add(CompactLabel(I18n.T("이벤트","活动"),16,Theme.Text));
+        eventSection.Children.Add(eventMobs);bossColumn.Children.Add(eventSection);
+        var pmcColumn=MonitorColumn("AI PMC",pmcs,new Thickness(8,0,0,0));Grid.SetColumn(pmcColumn,1);
+        raidColumns.Children.Add(bossColumn);raidColumns.Children.Add(pmcColumn);
     }
     private static StackPanel MonitorColumn(string title,StackPanel panel,Thickness margin)
     {
@@ -154,6 +177,16 @@ public class MainWindow : Window
     {
         if(busy || configuring || settingsView!=null)return;
         var view=new SettingsView(settings,reader.ObservedRoles,first);settingsView=view;subpage=true;Topmost=false;Content=view;Title=first?I18n.T("처음 시작하기 · Tarkov Boss Monitor","开始使用 · Tarkov Boss Monitor"):I18n.T("설정 · Tarkov Boss Monitor","设置 · Tarkov Boss Monitor");
+        if(WindowState==WindowState.Normal)
+        {
+            // Monitoring can shrink the waiting view. Restore room for settings,
+            // keeping the enlarged window inside the available desktop area.
+            var work=SystemParameters.WorkArea;
+            Width=Math.Max(Width,Math.Min(DefaultWindowWidth,Math.Max(MinWidth,work.Width-24)));
+            Height=Math.Max(Height,Math.Min(DefaultWindowHeight,Math.Max(MinHeight,work.Height-24)));
+            if(Left+Width>work.Right)Left=Math.Max(work.Left,work.Right-Width);
+            if(Top+Height>work.Bottom)Top=Math.Max(work.Top,work.Bottom-Height);
+        }
         view.Completed+=saved=>
         {
             if(saved)
@@ -165,7 +198,7 @@ public class MainWindow : Window
             settingsView=null;ReturnToMonitor();Render(DisplayRaid(reader.Current));
         };
     }
-    private void ReturnToMonitor(){subpage=false;Content=monitor;Title="Tarkov Boss Monitor";Topmost=settings.AlwaysOnTop;}
+    private void ReturnToMonitor(){subpage=false;Content=monitor;Title="Tarkov Boss Monitor";Topmost=settings.AlwaysOnTop;FitWindowToContent();}
     private async Task Tick()
     {
         if(settings.CheckForUpdates && DateTime.UtcNow>=nextUpdateCheckUtc)_ = CheckForUpdates();
@@ -189,9 +222,6 @@ public class MainWindow : Window
             await Task.Run(()=>reader.Poll(settings.GamePath,settings));
             if(closed)return;
             var current=DisplayRaid(reader.Current);
-            map.Text=current.Map==""?I18n.T("레이드 감지 대기","等待检测战局"):Catalog.MapName(current.Map);
-            raidLabel.Text=current.RaidId==""?"":$"{(current.Ended?I18n.T("종료된 레이드","已结束战局"):I18n.T("현재 레이드","当前战局"))} · {I18n.T("내 킬","我的击杀")} {current.PlayerKills} · {current.RaidId}";
-            raidLabel.Visibility=current.RaidId==""?Visibility.Collapsed:Visibility.Visible;
             SetStatus(Paths.LoggingReady(settings.GamePath)?"":I18n.T("로그 설정 확인 필요","需要检查日志设置"));
             Render(current);
             NotifyBosses(current);
@@ -227,8 +257,20 @@ public class MainWindow : Window
     }
     private static RaidState DisplayRaid(RaidState raid)
         => raid.Ended && (raid.EndedAt==null || DateTime.Now-raid.EndedAt>EndedRaidDisplayTime) ? new() : raid;
+    private void RenderRaidHeader(RaidState raid)
+    {
+        bool hasRaid=raid.Map!="";
+        map.Text=hasRaid?Catalog.MapName(raid.Map):I18n.T("레이드 감지 대기","等待检测战局");
+        raidLabel.Text=hasRaid?(raid.Ended?I18n.T("종료된 레이드","已结束战局"):I18n.T("현재 레이드","当前战局")):"";
+        raidLabel.Visibility=hasRaid?Visibility.Visible:Visibility.Collapsed;
+        playerKillsCaption.Text=I18n.T("내 처치","我的击杀");
+        playerKills.Text=hasRaid?raid.PlayerKills.ToString():"";
+        killsBadge.Visibility=hasRaid?Visibility.Visible:Visibility.Collapsed;
+    }
     private void Render(RaidState raid)
     {
+        // Kill counts can change without changes to any tracked enemy card.
+        RenderRaidHeader(raid);
         var filter=settings.Filter(raid.Map);
         var roles=filter.Mode=="selected"?filter.Roles:raid.Bosses.Keys.ToList();
         if(filter.Mode=="off"||raid.Map=="")roles=[];
@@ -239,8 +281,9 @@ public class MainWindow : Window
         string signature=raid.Key+raid.Ended+paused+filter.Mode+string.Join("|",roles.Select(r=>r+System.Text.Json.JsonSerializer.Serialize(raid.Bosses.GetValueOrDefault(r))))+System.Text.Json.JsonSerializer.Serialize(raid.Followers)+System.Text.Json.JsonSerializer.Serialize(raid.Pmcs)+System.Text.Json.JsonSerializer.Serialize(raid.SpecialAis)+System.Text.Json.JsonSerializer.Serialize(raid.Scavs)+System.Text.Json.JsonSerializer.Serialize(raid.Btr)+System.Text.Json.JsonSerializer.Serialize(raid.BtrReadyAt)+System.Text.Json.JsonSerializer.Serialize(raid.BtrTaxiAt)+btrLocation?.Key;
         // HALLOWEEN_EVENT_BEGIN
         signature+=System.Text.Json.JsonSerializer.Serialize(raid.InfectedScreamer);
+        signature+=System.Text.Json.JsonSerializer.Serialize(raid.InfectedTagilla);
         // HALLOWEEN_EVENT_END
-        if(signature==rendering)return;rendering=signature;bosses.Children.Clear();pmcs.Children.Clear();waiting.Children.Clear();
+        if(signature==rendering)return;rendering=signature;bosses.Children.Clear();pmcs.Children.Clear();eventMobs.Children.Clear();eventSection.Visibility=Visibility.Collapsed;waiting.Children.Clear();
         if(raid.Map=="")
         {
             raidColumns.Visibility=Visibility.Collapsed;waiting.Visibility=Visibility.Visible;RenderWaiting(waiting);FitWindowToContent();return;
@@ -249,9 +292,7 @@ public class MainWindow : Window
         RenderPmcs(raid);
         RenderSpecialAis(raid);
         RenderScavs(raid);
-        // HALLOWEEN_EVENT_BEGIN
-        RenderHalloweenInfected(raid,raid.InfectedScreamer,I18n.IsChinese?"感染者":I18n.IsKorean?"감염자":"Infected");
-        // HALLOWEEN_EVENT_END
+        RenderEventMobs(raid);
         RenderBtr(raid,btrLocation);
         if(filter.Mode=="off"){bosses.Children.Add(Theme.Label(I18n.T("이 맵은 감시하지 않도록 설정되어 있습니다.","此地图已设置为不监控。"),16,Theme.Muted));FitWindowToContent();return;}
         if(roles.Count==0){bosses.Children.Add(Theme.Label(filter.Mode=="selected"?I18n.T("선택된 보스가 없습니다. 설정에서 보스를 선택해 주세요.","未选择首领，请在设置中选择。"):I18n.T("모든 보스 감시 중 · 보스 판정 기록 대기","正在监控所有首领 · 等待判定记录"),16,Theme.Muted));FitWindowToContent();return;}
@@ -320,14 +361,13 @@ public class MainWindow : Window
             int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
             int alive=state.Count-dead;
             Brush accent=state.Count>0?(alive>0?Theme.Green:Theme.Muted):state.Status=="Planned"?Theme.Amber:Theme.Muted;
-            string initial=state.InitialPlannedWaves>0
-                ? state.Count>0 ? I18n.T("초기 스폰","初始刷新") : I18n.T("초기 스폰 예정","初始刷新已计划")
-                : I18n.T("초기 스폰 없음","无初始刷新");
-            Brush initialColor=state.InitialPlannedWaves==0?Theme.Muted:state.Count>0?Theme.Green:Theme.Amber;
             var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
             content.Children.Add(CompactLabel(state.Role.Equals("pmcBEAR",StringComparison.OrdinalIgnoreCase)?"BEAR":"USEC",18));
             if(state.Count>0)
                 AddLifeSummary(content,alive,dead,raid.Ended);
+            else
+                content.Children.Add(CompactLabel((state.Status=="Unknown"?I18n.T("스폰 미확인","未检测到刷新"):Helpers.Status(state.Status))
+                    +(raid.Ended?I18n.T(" · 레이드 종료"," · 战局已结束"):""),15,accent));
             // PMC_DIFFICULTY_BEGIN: estimated surviving impossible-difficulty PMCs.
             if(state.Count>0)
             {
@@ -338,7 +378,6 @@ public class MainWindow : Window
                 content.Children.Add(CompactLabel(text,13,Theme.Muted));
             }
             // PMC_DIFFICULTY_END
-            content.Children.Add(CompactLabel(initial,15,initialColor));
             string additional=raid.Ended
                 ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
                 : state.AdditionalPlannedWaves>0
@@ -356,23 +395,7 @@ public class MainWindow : Window
         var state=raid.Scavs;
         int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
         int alive=state.Count-dead;
-        var title=CompactLabel("Scav",16,Theme.Text);title.Margin=new Thickness(0,10,0,5);pmcs.Children.Add(title);
-        var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
-        content.Children.Add(CompactLabel("Scav",18));
-        if(state.Count==0)content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
-        AddLifeSummary(content,alive,dead,raid.Ended);
-        content.Children.Add(CompactLabel(raid.Ended
-            ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
-            : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,Theme.Muted));
-        if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
-        pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
-    }
-    // HALLOWEEN_EVENT_BEGIN
-    private void RenderHalloweenInfected(RaidState raid,BossState state,string name)
-    {
-        if(Catalog.CanonicalMapId(raid.Map).Equals("laboratory",StringComparison.OrdinalIgnoreCase))return;
-        int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
-        int alive=state.Count-dead;
+        string name=I18n.T("스캐브","Scav");
         var title=CompactLabel(name,16,Theme.Text);title.Margin=new Thickness(0,10,0,5);pmcs.Children.Add(title);
         var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
         content.Children.Add(CompactLabel(name,18));
@@ -384,7 +407,68 @@ public class MainWindow : Window
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
         pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
     }
-    // HALLOWEEN_EVENT_END
+    private void RenderEventMobs(RaidState raid)
+    {
+        // All seasonal/event-only enemies belong in the left Events section below
+        // bosses. Add future event mobs here, not to RenderPmcs/RenderSpecialAis.
+        // Map eligibility belongs here; the shared card only renders life state.
+        if(!Catalog.CanonicalMapId(raid.Map).Equals("laboratory",StringComparison.OrdinalIgnoreCase))
+            RenderEventMobCard(raid,raid.InfectedScreamer,I18n.T("감염자","感染者"),halloween:true);
+        // Show event bosses when a plan or an actual activation is recorded;
+        // their presence is evidence-based rather than a fixed map assumption.
+        if(raid.InfectedTagilla.Status!="Unknown" || raid.InfectedTagilla.Count>0)
+            RenderEventMobCard(raid,raid.InfectedTagilla,I18n.T("감염된 타길라","感染版塔吉拉"),monitorWaves:false);
+        eventSection.Visibility=eventMobs.Children.Count>0?Visibility.Visible:Visibility.Collapsed;
+    }
+    private void RenderEventMobCard(RaidState raid,BossState state,string name,bool halloween=false,bool monitorWaves=true)
+    {
+        int dead=state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
+        int alive=state.Count-dead;
+        Brush text=halloween?Theme.Color("#F3E4D7"):Theme.Text;
+        Brush muted=halloween?Theme.Color("#C4AFA5"):Theme.Muted;
+        var content=new StackPanel {Margin=new Thickness(14,8,14,7)};
+        if(halloween)
+        {
+            var heading=new DockPanel {Margin=new Thickness(0,2,0,2)};
+            var pumpkin=new Image {Source=HalloweenPumpkin(),Width=30,Height=30,Margin=new Thickness(10,0,0,0),IsHitTestVisible=false};
+            DockPanel.SetDock(pumpkin,Dock.Right);heading.Children.Add(pumpkin);
+            var title=new StackPanel {Orientation=Orientation.Horizontal};
+            title.Children.Add(CompactLabel(name,18,Theme.Color("#FFBA79")));
+            title.Children.Add(new Border {Background=Theme.Color("#493023"),CornerRadius=new CornerRadius(3),Padding=new Thickness(6,2,6,2),Margin=new Thickness(9,0,0,3),VerticalAlignment=VerticalAlignment.Center,
+                Child=new TextBlock {Text=I18n.T("할로윈","万圣节"),FontSize=11,Foreground=Theme.Color("#F2B177")}});
+            heading.Children.Add(title);content.Children.Add(heading);
+        }
+        else content.Children.Add(CompactLabel(name,18));
+        bool hasDecision=state.Status is "Planned" or "NotPlanned";
+        if(state.Count==0)content.Children.Add(CompactLabel(hasDecision?Helpers.Status(state.Status):I18n.T("스폰 미확인","未检测到刷新"),14,state.Status=="Planned"?Theme.Amber:muted));
+        if(state.Count>0 || !hasDecision)
+        {
+            AddLifeSummary(content,alive,dead,raid.Ended);
+            if(halloween)((TextBlock)content.Children[^1]).Foreground=alive>0?Theme.Color("#FFD09B"):muted;
+        }
+        if(state.SpawnChance is int chance)content.Children.Add(CompactLabel($"{I18n.T("스폰 확률","刷新概率")} {chance}%",13,muted));
+        if(monitorWaves)content.Children.Add(CompactLabel(raid.Ended
+            ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
+            : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,muted));
+        if(state.At!=null)content.Children.Add(CompactLabel($"{(state.Count>0?I18n.T("첫 활성화","首次激活"):I18n.T("기록","记录"))} {state.At:HH:mm:ss}",12,text));
+        if(!halloween){eventMobs.Children.Add(MonitorCard(content,alive>0?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted));return;}
+        // Opt-in skin for infected only: never alter Theme or other event cards.
+        var surface=new Grid();
+        surface.Children.Add(new System.Windows.Shapes.Path {Data=Geometry.Parse("M 90,0 L 0,70 M 90,0 L 35,70 M 90,0 L 0,18 M 90,0 L 90,70 M 67,0 Q 67,17 90,19 M 43,0 Q 43,34 90,39 M 18,0 Q 18,52 90,60"),
+            Stroke=Theme.Color("#C18B64"),StrokeThickness=1,Opacity=0.13,Width=90,Height=70,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Top,IsHitTestVisible=false});
+        surface.Children.Add(content);
+        eventMobs.Children.Add(new Border {Background=new LinearGradientBrush((Color)ColorConverter.ConvertFromString("#302027"),(Color)ColorConverter.ConvertFromString("#1B2226"),35),
+            BorderBrush=Theme.Color("#9C5834"),BorderThickness=new Thickness(3,1,1,1),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=surface});
+    }
+    private static ImageSource HalloweenPumpkin()
+    {
+        var drawing=new DrawingGroup();
+        drawing.Children.Add(new GeometryDrawing(Theme.Color("#8C9560"),null,Geometry.Parse("M 14,8 L 14,2 L 19,0 L 17,8 Z")));
+        drawing.Children.Add(new GeometryDrawing(Theme.Color("#E9893F"),new Pen(Theme.Color("#FFB66D"),0.7),Geometry.Parse("M 16,8 C 3,1 0,15 4,24 C 7,31 24,31 28,24 C 33,14 28,2 16,8 Z")));
+        drawing.Children.Add(new GeometryDrawing(null,new Pen(Theme.Color("#AB582E"),0.8),Geometry.Parse("M 12,9 C 8,14 8,24 12,28 M 20,9 C 24,14 24,24 20,28")));
+        drawing.Children.Add(new GeometryDrawing(Theme.Color("#302027"),null,Geometry.Parse("M 7,14 L 13,17 L 6,18 Z M 25,14 L 19,17 L 26,18 Z M 15,18 L 17,18 L 16,21 Z M 7,22 L 12,24 L 14,22 L 17,25 L 20,22 L 25,21 L 22,27 L 11,27 Z")));
+        drawing.Freeze();return new DrawingImage(drawing);
+    }
     private void RenderSpecialAis(RaidState raid)
     {
         var roles=Catalog.SpecialAiRolesForMap(raid.Map)

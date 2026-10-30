@@ -64,6 +64,7 @@ public class RaidState
     public BossState Scavs { get; set; } = new() { Role="assault" };
     // HALLOWEEN_EVENT_BEGIN
     public BossState InfectedScreamer { get; set; } = new() { Role="infectedScreamer" };
+    public BossState InfectedTagilla { get; set; } = new() { Role="infectedTagilla" };
     // HALLOWEEN_EVENT_END
     public BossState? Btr { get; set; }
     public List<DateTime> BtrReadyAt { get; set; } = [];
@@ -253,6 +254,7 @@ public class LogReader
             .Concat(raid.Scavs.LifeInstances)
             // HALLOWEEN_EVENT_BEGIN
             .Concat(raid.InfectedScreamer.LifeInstances)
+            .Concat(raid.InfectedTagilla.LifeInstances)
             // HALLOWEEN_EVENT_END
             .Concat(raid.Btr?.LifeInstances??[]);
     private List<RaidState> Rebuild(AppSettings settings)
@@ -438,11 +440,23 @@ public class LogReader
                 continue;
             }
             // HALLOWEEN_EVENT_BEGIN
-            if(ev.Value.Equals("infectedScreamer",StringComparison.OrdinalIgnoreCase) && !current.Ended)
+            if((ev.Value.Equals("infectedScreamer",StringComparison.OrdinalIgnoreCase) || ev.Value.Equals("infectedTagilla",StringComparison.OrdinalIgnoreCase)) && !current.Ended)
             {
-                if(ev.Kind=="Active")
+                bool tagilla=ev.Value.Equals("infectedTagilla",StringComparison.OrdinalIgnoreCase);
+                var infected=tagilla?current.InfectedTagilla:current.InfectedScreamer;
+                // The boss has a single spawn decision. Screamer wave plans are
+                // not individual activations and must not inflate its count.
+                if(ev.Kind=="Plan" && tagilla)
                 {
-                    var infected=current.InfectedScreamer;
+                    infected.SpawnChance=ev.SpawnChance;
+                    if(infected.Status!="Confirmed")
+                    {
+                        infected.Status=ev.Extra=="True"?"Planned":"NotPlanned";
+                        infected.At=ev.Time;
+                    }
+                }
+                else if(ev.Kind=="Active")
+                {
                     if(infected.Status!="Confirmed") {infected.At=ev.Time;infected.Position=ev.Extra;}
                     infected.Status="Confirmed";
                     string instance=ev.Id==""?ev.Time.ToString("O"):ev.Id;
@@ -568,6 +582,8 @@ public class LogReader
         // HALLOWEEN_EVENT_BEGIN
         if(raid.Ended)
             foreach(var instance in raid.InfectedScreamer.LifeInstances.Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
+        if(raid.Ended)
+            foreach(var instance in raid.InfectedTagilla.LifeInstances.Where(i=>i.DiedAt==null)) instance.LifeStatus="DeathUnconfirmedAtEnd";
         // HALLOWEEN_EVENT_END
         }
         return raids;

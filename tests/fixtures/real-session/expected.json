@@ -1,0 +1,989 @@
+[
+  {
+    "Map": "",
+    "Boundary": "2026-10-27T21:47:30.117",
+    "Started": null,
+    "Ended": true,
+    "EndedAt": "2026-10-27T21:49:25.089",
+    "GameDateTime": "2026-10-27T20:33:05",
+    "GameTimeFactor": 7,
+    "RaidDuration": null,
+    "PlayerKills": 0,
+    "Bosses": {},
+    "Followers": {},
+    "Pmcs": {},
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "laboratory",
+    "Boundary": "2026-10-27T21:49:25.089",
+    "Started": "2026-10-27T21:50:03.99",
+    "Ended": true,
+    "EndedAt": "2026-10-27T21:56:00.261",
+    "GameDateTime": "2026-10-27T20:48:01",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:30:00",
+    "PlayerKills": 0,
+    "Bosses": {},
+    "Followers": {},
+    "Pmcs": {
+      "pmcUSEC": {
+        "Role": "pmcUSEC",
+        "PlannedWaves": 1,
+        "NotPlannedWaves": 1,
+        "InitialPlannedWaves": 1,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T21:50:04.081",
+        "LifeInstances": [
+          {
+            "BotId": "2",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.081",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "6",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.128",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          }
+        ],
+        "Count": 2,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      },
+      "pmcBEAR": {
+        "Role": "pmcBEAR",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T21:50:04.125",
+        "LifeInstances": [
+          {
+            "BotId": "3",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.125",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "4",
+            "PmcDifficulty": "easy",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.127",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "5",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.127",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "7",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:50:04.128",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          }
+        ],
+        "Count": 4,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      }
+    },
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "laboratory",
+    "Boundary": "2026-10-27T21:56:00.261",
+    "Started": "2026-10-27T21:56:37.265",
+    "Ended": true,
+    "EndedAt": "2026-10-27T22:11:30.3",
+    "GameDateTime": "2026-10-27T21:33:57",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:30:00",
+    "PlayerKills": 9,
+    "Bosses": {},
+    "Followers": {},
+    "Pmcs": {
+      "pmcUSEC": {
+        "Role": "pmcUSEC",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T21:56:37.399",
+        "LifeInstances": [
+          {
+            "BotId": "3",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.399",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "4",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.4",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T21:59:58.357",
+            "DeathPosition": "-216.34, 0.04, -322.78"
+          },
+          {
+            "BotId": "5",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.401",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "6",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.402",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:00:00.227",
+            "DeathPosition": "-214.64, 0.04, -322.26"
+          }
+        ],
+        "Count": 4,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      },
+      "pmcBEAR": {
+        "Role": "pmcBEAR",
+        "PlannedWaves": 1,
+        "NotPlannedWaves": 1,
+        "InitialPlannedWaves": 1,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T21:56:37.358",
+        "LifeInstances": [
+          {
+            "BotId": "2",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.358",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T21:59:24.02",
+            "DeathPosition": "-212.92, 4.10, -324.07"
+          },
+          {
+            "BotId": "7",
+            "PmcDifficulty": "",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.402",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T21:59:31.54",
+            "DeathPosition": "-213.74, 4.10, -324.41"
+          },
+          {
+            "BotId": "8",
+            "PmcDifficulty": "",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T21:56:37.404",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T21:59:20.609",
+            "DeathPosition": "-208.99, 4.10, -319.77"
+          }
+        ],
+        "Count": 3,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      }
+    },
+    "SpecialAis": {
+      "pmcBot": {
+        "Role": "pmcBot",
+        "Status": "Confirmed",
+        "At": "2026-10-27T22:01:25.568",
+        "Position": "-248.42, 4.16, -281.80",
+        "Zone": "",
+        "SpawnChance": null,
+        "LifeInstances": [
+          {
+            "BotId": "9",
+            "PmcDifficulty": "",
+            "Position": "-248.42, 4.16, -281.80",
+            "Zone": "BotZoneFloor2",
+            "SpawnedAt": "2026-10-27T22:01:25.568",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:01:53.344",
+            "DeathPosition": "-238.44, 4.12, -282.09"
+          },
+          {
+            "BotId": "10",
+            "PmcDifficulty": "",
+            "Position": "-248.42, 4.16, -281.80",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:01:36.084",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:01:56.34",
+            "DeathPosition": "-248.17, 4.12, -282.13"
+          },
+          {
+            "BotId": "12",
+            "PmcDifficulty": "",
+            "Position": "-248.42, 4.16, -281.80",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:01:36.899",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:01:52.814",
+            "DeathPosition": "-230.37, 4.12, -282.60"
+          },
+          {
+            "BotId": "11",
+            "PmcDifficulty": "",
+            "Position": "-248.42, 4.16, -281.80",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:01:36.9",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:02:01.367",
+            "DeathPosition": "-239.97, 4.12, -281.99"
+          },
+          {
+            "BotId": "13",
+            "PmcDifficulty": "",
+            "Position": "-219.66, -4.01, -389.03",
+            "Zone": "BotZoneBasement",
+            "SpawnedAt": "2026-10-27T22:03:58.634",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "14",
+            "PmcDifficulty": "",
+            "Position": "-219.66, -4.01, -389.03",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:04:09.042",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          },
+          {
+            "BotId": "15",
+            "PmcDifficulty": "",
+            "Position": "-219.66, -4.01, -389.03",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:04:09.518",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          }
+        ],
+        "Count": 7
+      }
+    },
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "factory4_day",
+    "Boundary": "2026-10-27T22:11:30.3",
+    "Started": "2026-10-27T22:12:07.816",
+    "Ended": true,
+    "EndedAt": "2026-10-27T22:21:00.331",
+    "GameDateTime": "2016-08-04T15:28:00",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:20:00",
+    "PlayerKills": 8,
+    "Bosses": {
+      "bossTagilla": {
+        "Role": "bossTagilla",
+        "Status": "NotPlanned",
+        "At": "2026-10-27T22:11:45.409",
+        "Position": "",
+        "Zone": "",
+        "SpawnChance": 50,
+        "LifeInstances": [],
+        "Count": 0
+      }
+    },
+    "Followers": {},
+    "Pmcs": {
+      "pmcUSEC": {
+        "Role": "pmcUSEC",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T22:12:07.923",
+        "LifeInstances": [
+          {
+            "BotId": "4",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.923",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:14:45.287",
+            "DeathPosition": "29.68, 0.05, 25.52"
+          },
+          {
+            "BotId": "7",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.925",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:15:09.646",
+            "DeathPosition": "12.25, 0.22, 33.47"
+          },
+          {
+            "BotId": "10",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.927",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:15:06.198",
+            "DeathPosition": "19.36, 0.03, 24.14"
+          }
+        ],
+        "Count": 3,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      },
+      "pmcBEAR": {
+        "Role": "pmcBEAR",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T22:12:07.924",
+        "LifeInstances": [
+          {
+            "BotId": "5",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.924",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:14:22.771",
+            "DeathPosition": "51.61, 0.06, 26.64"
+          },
+          {
+            "BotId": "6",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.924",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:13:55.379",
+            "DeathPosition": "-19.50, 2.73, 23.67"
+          },
+          {
+            "BotId": "8",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.925",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:14:23.835",
+            "DeathPosition": "51.80, 0.06, 27.60"
+          },
+          {
+            "BotId": "9",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:12:07.926",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:13:47.609",
+            "DeathPosition": "-17.59, 0.03, 6.56"
+          }
+        ],
+        "Count": 4,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      }
+    },
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Confirmed",
+      "At": "2026-10-27T22:12:07.922",
+      "Position": "42.26, -2.60, -9.52",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [
+        {
+          "BotId": "2",
+          "PmcDifficulty": "",
+          "Position": "42.26, -2.60, -9.52",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:12:07.922",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:13:03.157",
+          "DeathPosition": "-14.03, 0.37, -6.60"
+        },
+        {
+          "BotId": "3",
+          "PmcDifficulty": "",
+          "Position": "15.25, 4.55, 41.21",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:12:07.923",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:12:29.057",
+          "DeathPosition": "10.10, 4.53, 38.71"
+        },
+        {
+          "BotId": "11",
+          "PmcDifficulty": "",
+          "Position": "57.70, 0.28, 53.41",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:13:45.118",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:14:06.55",
+          "DeathPosition": "60.53, 0.23, 43.35"
+        },
+        {
+          "BotId": "12",
+          "PmcDifficulty": "",
+          "Position": "13.78, -2.60, -21.65",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:13:45.233",
+          "LifeStatus": "DeathUnconfirmedAtEnd",
+          "DiedAt": null,
+          "DeathPosition": ""
+        }
+      ],
+      "Count": 4
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "factory4_night",
+    "Boundary": "2026-10-27T22:21:00.331",
+    "Started": "2026-10-27T22:21:34.867",
+    "Ended": true,
+    "EndedAt": "2026-10-27T22:40:40.963",
+    "GameDateTime": "2016-08-04T03:28:00",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:25:00",
+    "PlayerKills": 11,
+    "Bosses": {
+      "bossTagilla": {
+        "Role": "bossTagilla",
+        "Status": "Confirmed",
+        "At": "2026-10-27T22:21:34.979",
+        "Position": "-32.09, -2.61, 29.97",
+        "Zone": "BotZone",
+        "SpawnChance": 75,
+        "LifeInstances": [
+          {
+            "BotId": "4",
+            "PmcDifficulty": "",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.979",
+            "LifeStatus": "DeathUnconfirmedAtEnd",
+            "DiedAt": null,
+            "DeathPosition": ""
+          }
+        ],
+        "Count": 1
+      },
+      "sectantPriest": {
+        "Role": "sectantPriest",
+        "Status": "NotPlanned",
+        "At": "2026-10-27T22:21:13.268",
+        "Position": "",
+        "Zone": "",
+        "SpawnChance": 12,
+        "LifeInstances": [],
+        "Count": 0
+      }
+    },
+    "Followers": {},
+    "Pmcs": {
+      "pmcBEAR": {
+        "Role": "pmcBEAR",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T22:21:34.982",
+        "LifeInstances": [
+          {
+            "BotId": "5",
+            "PmcDifficulty": "easy",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.982",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:26:48.067",
+            "DeathPosition": "9.50, 0.99, 37.11"
+          },
+          {
+            "BotId": "7",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.983",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:24:10.15",
+            "DeathPosition": "-8.36, -0.13, -10.60"
+          },
+          {
+            "BotId": "8",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.984",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:29:22.893",
+            "DeathPosition": "12.91, 0.03, 23.15"
+          }
+        ],
+        "Count": 3,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      },
+      "pmcUSEC": {
+        "Role": "pmcUSEC",
+        "PlannedWaves": 2,
+        "NotPlannedWaves": 0,
+        "InitialPlannedWaves": 2,
+        "AdditionalPlannedWaves": 0,
+        "FirstSpawnedAt": "2026-10-27T22:21:34.976",
+        "LifeInstances": [
+          {
+            "BotId": "2",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.976",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:25:01.011",
+            "DeathPosition": "19.79, 0.03, -19.01"
+          },
+          {
+            "BotId": "3",
+            "PmcDifficulty": "hard",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.977",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:26:17.477",
+            "DeathPosition": "22.96, 1.00, 36.08"
+          },
+          {
+            "BotId": "6",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.983",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:23:43.778",
+            "DeathPosition": "-4.44, -0.12, -13.47"
+          },
+          {
+            "BotId": "9",
+            "PmcDifficulty": "normal",
+            "Position": "",
+            "Zone": "",
+            "SpawnedAt": "2026-10-27T22:21:34.985",
+            "LifeStatus": "DeadConfirmed",
+            "DiedAt": "2026-10-27T22:26:17.096",
+            "DeathPosition": "24.71, 0.99, 36.30"
+          }
+        ],
+        "Count": 4,
+        "TotalWaves": 2,
+        "Status": "Confirmed"
+      }
+    },
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Confirmed",
+      "At": "2026-10-27T22:21:34.986",
+      "Position": "42.26, -2.61, -9.52",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [
+        {
+          "BotId": "10",
+          "PmcDifficulty": "",
+          "Position": "42.26, -2.61, -9.52",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:21:34.986",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:21:53.181",
+          "DeathPosition": "45.65, 0.16, -2.09"
+        },
+        {
+          "BotId": "11",
+          "PmcDifficulty": "",
+          "Position": "-44.30, 1.12, 38.87",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:21:34.987",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:26:35.186",
+          "DeathPosition": "-19.99, 1.07, 47.29"
+        },
+        {
+          "BotId": "12",
+          "PmcDifficulty": "",
+          "Position": "15.25, 4.56, 41.21",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:21:43.91",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:24:52.857",
+          "DeathPosition": "11.14, 4.53, 35.90"
+        },
+        {
+          "BotId": "13",
+          "PmcDifficulty": "",
+          "Position": "33.02, 0.05, -33.12",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:21:43.928",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:21:46.054",
+          "DeathPosition": "35.81, 0.03, -32.63"
+        },
+        {
+          "BotId": "15",
+          "PmcDifficulty": "",
+          "Position": "31.75, 0.08, -0.30",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:24:12.877",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:27:04.067",
+          "DeathPosition": "30.89, 0.99, 35.44"
+        },
+        {
+          "BotId": "14",
+          "PmcDifficulty": "",
+          "Position": "35.55, 8.16, 36.41",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:24:12.879",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:27:10.984",
+          "DeathPosition": "8.70, 2.23, 40.81"
+        },
+        {
+          "BotId": "16",
+          "PmcDifficulty": "",
+          "Position": "0.34, -2.65, 14.70",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:26:01.133",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:26:42.214",
+          "DeathPosition": "9.37, 1.07, 34.12"
+        },
+        {
+          "BotId": "17",
+          "PmcDifficulty": "",
+          "Position": "-21.81, 2.74, 32.56",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:26:01.645",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:27:11.837",
+          "DeathPosition": "8.42, 2.30, 40.83"
+        },
+        {
+          "BotId": "18",
+          "PmcDifficulty": "",
+          "Position": "0.34, -2.65, 14.70",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:28:12.016",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:29:16.97",
+          "DeathPosition": "12.82, -1.44, 20.99"
+        },
+        {
+          "BotId": "19",
+          "PmcDifficulty": "",
+          "Position": "35.92, 4.55, 35.34",
+          "Zone": "",
+          "SpawnedAt": "2026-10-27T22:28:12.93",
+          "LifeStatus": "DeadConfirmed",
+          "DiedAt": "2026-10-27T22:28:21.772",
+          "DeathPosition": "33.55, 8.07, 35.89"
+        }
+      ],
+      "Count": 10
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "",
+    "Boundary": "2026-10-27T22:40:40.963",
+    "Started": "2026-10-27T22:41:40.114",
+    "Ended": true,
+    "EndedAt": "2026-10-27T22:58:09.175",
+    "GameDateTime": "2026-10-27T14:45:39",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:35:00",
+    "PlayerKills": 0,
+    "Bosses": {},
+    "Followers": {},
+    "Pmcs": {},
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [],
+    "BtrTaxiAt": []
+  },
+  {
+    "Map": "",
+    "Boundary": "2026-10-27T22:58:09.175",
+    "Started": "2026-10-27T22:59:09.334",
+    "Ended": false,
+    "EndedAt": null,
+    "GameDateTime": "2026-10-27T16:47:55",
+    "GameTimeFactor": 7,
+    "RaidDuration": "00:35:00",
+    "PlayerKills": 0,
+    "Bosses": {},
+    "Followers": {},
+    "Pmcs": {},
+    "SpecialAis": {},
+    "Scavs": {
+      "Role": "assault",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedScreamer": {
+      "Role": "infectedScreamer",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "InfectedTagilla": {
+      "Role": "infectedTagilla",
+      "Status": "Unknown",
+      "At": null,
+      "Position": "",
+      "Zone": "",
+      "SpawnChance": null,
+      "LifeInstances": [],
+      "Count": 0
+    },
+    "Btr": null,
+    "BtrReadyAt": [
+      "2026-10-27T23:05:25.789",
+      "2026-10-27T23:07:56.831",
+      "2026-10-27T23:10:35.145",
+      "2026-10-27T23:14:11.778",
+      "2026-10-27T23:17:04.958"
+    ],
+    "BtrTaxiAt": []
+  }
+]

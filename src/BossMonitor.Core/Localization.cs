@@ -20,7 +20,7 @@ public static class I18n
         ["감시 안 함"]="Do not monitor", ["감시 오류: "]="Monitoring error: ", ["감시 일시 중지"]="Pause monitoring",
         ["감시 일시 중지 / 재개"]="Pause / resume monitoring", ["감시 재개"]="Resume monitoring",
         ["개인 경로·닉네임·프로필·원본 로그를 제외한 진단 파일을 저장했습니다."]="Saved a diagnostic file without personal paths, nicknames, profiles, or raw logs.",
-        ["개체"]="Instance", ["건너뜀"]="Skipped", ["내 킬"]="My kills",
+        ["개체"]="Instance", ["건너뜀"]="Skipped", ["내 킬"]="My kills", ["내 처치"]="My kills", ["이벤트"]="Events", ["감염자"]="Infected", ["감염된 타길라"]="Infected Tagilla", ["할로윈"]="Halloween", ["스캐브"]="Scav",
         ["건의 로그 설정은 게임 실행·설정 변경 등으로 자동 복원하지 않았습니다. Logging.config의 aiData minLevel을 백업의 이전 값으로 수동 복원할 수 있습니다. 백업 위치:"]=" logging settings were not restored automatically because the game was running or the settings had changed. You can manually restore aiData minLevel in Logging.config to the previous value in the backup. Backup location:",
         ["게임 경로 미등록"]="Game path not registered", ["게임 경로 설정 대기"]="Waiting for game path setup",
         ["게임 경로를 선택하면 로그 용량을 확인할 수 있습니다."]="Select the game path to check log storage usage.",
