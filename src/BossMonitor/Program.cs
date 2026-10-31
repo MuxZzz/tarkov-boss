@@ -58,7 +58,11 @@ internal static class Program
 internal static class Theme
 {
     public static readonly Brush Bg=Color("#F3F6F4"),Card=Color("#FFFFFF"),Text=Color("#192D23"),Muted=Color("#52665A"),Green=Color("#166747"),Amber=Color("#8A5100");
-    public static Brush Color(string hex)=>new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString(hex));
+    public static Brush Color(string hex)
+    {
+        var brush=new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString(hex));
+        brush.Freeze();return brush;
+    }
     public static void Apply(Application app)
     {
         var window=new Style(typeof(Window));

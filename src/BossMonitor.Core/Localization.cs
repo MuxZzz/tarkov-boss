@@ -15,6 +15,10 @@ public static class I18n
 
     private static readonly Dictionary<string,string> English = new()
     {
+        ["Impossible {0}명"]="Impossible {0}",
+        ["전체 생존 추정 {0}명에 포함"]="Included in the {0} estimated alive",
+        ["Impossible · 생존 추정 {0}명"]="Impossible · Estimated alive: {0}",
+        ["Impossible · 종료 시 사망 미확인 {0}명"]="Impossible · Death unconfirmed at raid end: {0}",
         [" · 레이드 종료"]=" · Raid ended", [" 알림을 클릭하면 창을 다시 엽니다."]=" Click the notification to reopen the window.",
         ["●  감시 일시 중지"]="●  Monitoring paused", ["●  감시 중"]="●  Monitoring",
         ["감시 안 함"]="Do not monitor", ["감시 오류: "]="Monitoring error: ", ["감시 일시 중지"]="Pause monitoring",
@@ -60,7 +64,7 @@ public static class I18n
         ["링크 또는 확인할 수 없는 경로는 처리하지 않습니다."]="Links and unverifiable paths are not processed.", ["링크 파일은 삭제하지 않습니다."]="Link files are not deleted.",
         ["링크 파일은 처리하지 않습니다."]="Link files are not processed.",
         ["매일 04:00에 Windows 예약 작업으로 정리합니다. 앱이 꺼져 있어도 실행됩니다.\n게임 실행 중·가장 최근 세션은 보호하며, 최근 7일 로그는 용량을 이유로 삭제하지 않습니다."]="A Windows scheduled task cleans logs every day at 04:00, even when the app is closed.\nLogs in use and the newest session are protected, and logs from the latest 7 days are never deleted to save space.",
-        ["보스"]="Bosses", ["AI PMC 웨이브 기록 대기"]="Waiting for AI PMC wave records", ["로그"]="Rogue", ["레이더"]="Raider",
+        ["보스"]="Bosses", ["이벤트 보스"]="Event bosses", ["AI PMC 웨이브 기록 대기"]="Waiting for AI PMC wave records", ["로그"]="Rogue", ["레이더"]="Raider",
         ["초기 스폰"]="Initial spawn", ["초기 스폰 예정"]="Initial spawn planned", ["초기 스폰 없음"]="No initial spawn",
         ["추가 스폰 감시 중"]="Monitoring for additional spawns", ["추가 스폰 예정"]="Additional spawn planned", ["추가 스폰 감시 종료"]="Additional spawn monitoring ended",
         ["첫 활성화"]="First activation",

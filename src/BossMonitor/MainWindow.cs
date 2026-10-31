@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using System.Windows.Media.Animation;
 
 namespace BossMonitor;
 public class MainWindow : Window
@@ -28,6 +29,7 @@ public class MainWindow : Window
     private bool subpage;
     private bool busy,paused,closed,configuring,exitRequested;
     private string rendering="",retryRoot="";
+    private CardChangeTracker? cardChanges;
     private readonly HashSet<string> notifiedBosses=new(StringComparer.OrdinalIgnoreCase);
     private DateTime hiddenAt=DateTime.MaxValue;
     private DateTime lastConfig=DateTime.MinValue;
@@ -120,18 +122,91 @@ public class MainWindow : Window
         Text=text,FontSize=size,FontWeight=size>=16?FontWeights.SemiBold:FontWeights.Normal,
         Foreground=color??Theme.Text,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,2,0,5)
     };
-    private static Border MonitorCard(UIElement content,Brush accent)=>new()
+    private const double InactiveCardOpacity=0.65;
+    // Unknown/Planned and death-unconfirmed instances must stay prominent.
+    // An actual activation takes precedence over an earlier spawn decision.
+    private static bool IsInactiveCard(string status,List<BossInstance> instances)=>instances.Count>0
+        ? instances.All(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null)
+        : status=="NotPlanned";
+    private static Border MonitorCard(UIElement content,Brush accent,bool inactive=false)=>new()
     {
         Background=Theme.Card,BorderBrush=accent,BorderThickness=new Thickness(3,0,0,0),
-        CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content
+        CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=content,
+        Opacity=inactive?InactiveCardOpacity:1
     };
-    private static void AddLifeSummary(StackPanel content,int alive,int dead,bool ended)
+    private Border HighlightCard(Border card,string key)
+    {
+        var now=DateTimeOffset.UtcNow;
+        var change=cardChanges?.Recent(key,now);
+        if(change==null)return card;
+        var age=now-change.At;
+        double strength=1-Math.Clamp((age-CardChangeTracker.HoldDuration).TotalSeconds/(CardChangeTracker.Duration-CardChangeTracker.HoldDuration).TotalSeconds,0,1);
+        var remaining=CardChangeTracker.Duration-age;
+        var hold=age<CardChangeTracker.HoldDuration?CardChangeTracker.HoldDuration-age:TimeSpan.Zero;
+        DoubleAnimationUsingKeyFrames Fade(double highlighted,double normal)
+        {
+            var animation=new DoubleAnimationUsingKeyFrames {FillBehavior=FillBehavior.Stop};
+            double current=normal+(highlighted-normal)*strength;
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(current,KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            if(hold>TimeSpan.Zero)animation.KeyFrames.Add(new LinearDoubleKeyFrame(highlighted,KeyTime.FromTimeSpan(hold)));
+            animation.KeyFrames.Add(new LinearDoubleKeyFrame(normal,KeyTime.FromTimeSpan(remaining)));
+            return animation;
+        }
+        Color color=(Color)ColorConverter.ConvertFromString(change.Kind switch
+        {
+            CardChangeTracker.ChangeKind.Activated=>"#2E9B70",
+            CardChangeTracker.ChangeKind.Planned=>"#BD8431",
+            CardChangeTracker.ChangeKind.Death=>"#9E4038",
+            _=>"#71857B"
+        });
+        // Hold a distinct inset rail and full-width wash before fading. Keep
+        // text/layout stable and preserve the infected card's Halloween skin.
+        var wash=new Border
+        {
+            CornerRadius=new CornerRadius(6),IsHitTestVisible=false,
+            Background=new LinearGradientBrush(Color.FromArgb(95,color.R,color.G,color.B),Color.FromArgb(25,color.R,color.G,color.B),0),
+            BorderBrush=new SolidColorBrush(color),BorderThickness=new Thickness(4,1,1,1),Opacity=0
+        };
+        var content=card.Child;card.Child=null;
+        var surface=new Grid();surface.Children.Add(wash);surface.Children.Add(content);card.Child=surface;
+        wash.BeginAnimation(OpacityProperty,Fade(1,0));
+        if(card.BorderBrush is SolidColorBrush original)
+        {
+            var accent=new SolidColorBrush(original.Color);card.BorderBrush=accent;
+            Color start=Color.FromRgb(
+                (byte)(original.Color.R+(color.R-original.Color.R)*strength),
+                (byte)(original.Color.G+(color.G-original.Color.G)*strength),
+                (byte)(original.Color.B+(color.B-original.Color.B)*strength));
+            var animation=new ColorAnimationUsingKeyFrames {FillBehavior=FillBehavior.Stop};
+            animation.KeyFrames.Add(new LinearColorKeyFrame(start,KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            if(hold>TimeSpan.Zero)animation.KeyFrames.Add(new LinearColorKeyFrame(color,KeyTime.FromTimeSpan(hold)));
+            animation.KeyFrames.Add(new LinearColorKeyFrame(original.Color,KeyTime.FromTimeSpan(remaining)));
+            accent.BeginAnimation(SolidColorBrush.ColorProperty,animation);
+        }
+        if(card.Opacity<1)
+            card.BeginAnimation(OpacityProperty,Fade(1,card.Opacity));
+        return card;
+    }
+    private static void ColorDeathText(TextBlock label,int dead,bool halloween=false)
+    {
+        string text=label.Text;
+        int start=text.IndexOf(I18n.T("사망 확인","已确认死亡"),StringComparison.Ordinal);
+        if(start<0)return;
+        label.Text="";
+        if(start>0)label.Inlines.Add(new System.Windows.Documents.Run(text[..start]));
+        label.Inlines.Add(new System.Windows.Documents.Run(text[start..])
+        {
+            Foreground=dead>0?Theme.Color(halloween?"#F3A195":"#9E4038")
+                :halloween?Theme.Color("#C4AFA5"):Theme.Muted
+        });
+    }
+    private static void AddLifeSummary(StackPanel content,int alive,int dead,bool ended,bool halloween=false)
     {
         string life=ended
             ? $"{I18n.T("종료 시 사망 미확인","结束时未确认死亡")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}"
             : $"{I18n.T("생존 추정","推测存活")} {alive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {dead}{I18n.T("명","个")}";
-        var label=CompactLabel(life,15,alive>0?Theme.Green:Theme.Muted);
-        label.FontWeight=FontWeights.SemiBold;content.Children.Add(label);
+        var label=CompactLabel(life,15,halloween?(alive>0?Theme.Color("#FFD09B"):Theme.Color("#C4AFA5")):alive>0?Theme.Green:Theme.Muted);
+        label.FontWeight=FontWeights.SemiBold;ColorDeathText(label,dead,halloween);content.Children.Add(label);
     }
     private void FitWindowToContent()
     {
@@ -269,6 +344,7 @@ public class MainWindow : Window
     }
     private void Render(RaidState raid)
     {
+        (cardChanges??=new()).Observe(raid,DateTimeOffset.UtcNow);
         // Kill counts can change without changes to any tracked enemy card.
         RenderRaidHeader(raid);
         var filter=settings.Filter(raid.Map);
@@ -306,6 +382,7 @@ public class MainWindow : Window
             if(state.Status=="Confirmed")
             {
                 var lifeLabel=CompactLabel(Helpers.LifeStatus(state,raid.Ended),15,allDead?Theme.Muted:Theme.Green);
+                ColorDeathText(lifeLabel,state.LifeInstances.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null));
                 lifeLabel.FontWeight=FontWeights.SemiBold;content.Children.Add(lifeLabel);
             }
             else content.Children.Add(CompactLabel(Helpers.Status(state.Status)+(raid.Ended?I18n.T(" · 레이드 종료"," · 战局已结束"):""),15,accent));
@@ -319,11 +396,15 @@ public class MainWindow : Window
                     int followerDead=followers.Count(i=>i.LifeStatus=="DeadConfirmed" && i.DiedAt!=null);
                     int followerAlive=followers.Count-followerDead;
                     string followerLife=raid.Ended?I18n.T("사망 미확인","死亡未确认"):I18n.T("생존 추정","推测存活");
-                    content.Children.Add(CompactLabel($"{I18n.T("쫄","随从")} {followers.Count}{I18n.T("명","个")} · {followerLife} {followerAlive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {followerDead}{I18n.T("명","个")}",13,followerAlive>0?Theme.Green:Theme.Muted));
+                    var followerLabel=CompactLabel($"{I18n.T("쫄","随从")} {followers.Count}{I18n.T("명","个")} · {followerLife} {followerAlive}{I18n.T("명","个")} · {I18n.T("사망 확인","已确认死亡")} {followerDead}{I18n.T("명","个")}",13,followerAlive>0?Theme.Green:Theme.Muted);
+                    ColorDeathText(followerLabel,followerDead);content.Children.Add(followerLabel);
                 }
                 if(state.LifeInstances.Count>1)
                     foreach(var instance in state.LifeInstances.Where(i=>i.DiedAt!=null))
-                        content.Children.Add(CompactLabel($"{I18n.T("개체", "个体")} {instance.BotId} · {I18n.T("사망 확인", "已确认死亡")} {instance.DiedAt:HH:mm:ss}",12,Theme.Muted));
+                    {
+                        var deathLabel=CompactLabel($"{I18n.T("개체", "个体")} {instance.BotId} · {I18n.T("사망 확인", "已确认死亡")} {instance.DiedAt:HH:mm:ss}",12,Theme.Muted);
+                        ColorDeathText(deathLabel,1);content.Children.Add(deathLabel);
+                    }
                 string zoneDisplay=state.Zone;
                 if(I18n.IsChinese && state.Position!="")
                 {
@@ -339,7 +420,7 @@ public class MainWindow : Window
                 }
                 if(state.Count>1)content.Children.Add(CompactLabel($"{I18n.T("활성화 개체", "已激活个体")} {state.Count}",12,Theme.Muted));
             }
-            bosses.Children.Add(MonitorCard(content,accent));
+            bosses.Children.Add(HighlightCard(MonitorCard(content,accent,IsInactiveCard(state.Status,state.LifeInstances)),$"boss:{role}"));
         }
         FitWindowToContent();
     }
@@ -372,10 +453,7 @@ public class MainWindow : Window
             if(state.Count>0)
             {
                 int impossible=state.LifeInstances.Count(i=>i.PmcDifficulty=="impossible" && (i.LifeStatus!="DeadConfirmed" || i.DiedAt==null));
-                string text=raid.Ended
-                    ? (I18n.IsChinese?$"Impossible 难度 · 结束时死亡未确认 {impossible} 人":I18n.IsKorean?$"Impossible 난이도 · 종료 시 사망 미확인 {impossible}명":$"Impossible difficulty · Death unconfirmed at raid end: {impossible}")
-                    : (I18n.IsChinese?$"Impossible 难度 · 推测存活 {impossible} 人":I18n.IsKorean?$"Impossible 난이도 · 생존 추정 {impossible}명":$"Impossible difficulty · Estimated alive: {impossible}");
-                content.Children.Add(CompactLabel(text,13,Theme.Muted));
+                AddPmcDifficultySummary(content,impossible,alive,raid.Ended);
             }
             // PMC_DIFFICULTY_END
             string additional=raid.Ended
@@ -386,8 +464,34 @@ public class MainWindow : Window
             content.Children.Add(CompactLabel(additional,13,state.AdditionalPlannedWaves>0?Theme.Amber:Theme.Muted));
             if(state.Count>0)
                 content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.FirstSpawnedAt:HH:mm:ss}",12));
-            pmcs.Children.Add(MonitorCard(content,accent));
+            pmcs.Children.Add(HighlightCard(MonitorCard(content,accent,state.AdditionalPlannedWaves==0 && IsInactiveCard(state.Status,state.LifeInstances)),$"pmc:{state.Role}"));
         }
+    }
+    private static void AddPmcDifficultySummary(StackPanel content,int impossible,int alive,bool ended)
+    {
+        if(ended || impossible==0)
+        {
+            string format=ended
+                ? I18n.T("Impossible · 종료 시 사망 미확인 {0}명","Impossible · 结束时死亡未确认 {0} 人")
+                : I18n.T("Impossible · 생존 추정 {0}명","Impossible · 推测存活 {0} 人");
+            content.Children.Add(CompactLabel(string.Format(format,impossible),13,Theme.Muted));
+            return;
+        }
+
+        var warning=new StackPanel();
+        var title=CompactLabel(string.Format(I18n.T("Impossible {0}명","Impossible {0} 人"),impossible),15,Theme.Color("#9E4038"));
+        title.FontWeight=FontWeights.SemiBold;
+        title.Margin=new Thickness(0,0,0,3);
+        warning.Children.Add(title);
+        var subset=CompactLabel(string.Format(I18n.T("전체 생존 추정 {0}명에 포함","已计入推测存活的 {0} 人"),alive),12,Theme.Muted);
+        subset.Margin=new Thickness(0);
+        warning.Children.Add(subset);
+        content.Children.Add(new Border
+        {
+            Background=Theme.Color("#FBEEEA"),BorderBrush=Theme.Color("#DFA79E"),
+            BorderThickness=new Thickness(3,1,1,1),CornerRadius=new CornerRadius(5),
+            Padding=new Thickness(10,7,10,7),Margin=new Thickness(0,5,0,8),Child=warning
+        });
     }
     private void RenderScavs(RaidState raid)
     {
@@ -405,7 +509,7 @@ public class MainWindow : Window
             ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
             : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,Theme.Muted));
         if(state.At!=null)content.Children.Add(CompactLabel($"{I18n.T("첫 활성화","首次激活")} {state.At:HH:mm:ss}",12));
-        pmcs.Children.Add(MonitorCard(content,alive>0?Theme.Green:Theme.Muted));
+        pmcs.Children.Add(HighlightCard(MonitorCard(content,alive>0?Theme.Green:Theme.Muted,IsInactiveCard(state.Status,state.LifeInstances)),"scavs"));
     }
     private void RenderEventMobs(RaidState raid)
     {
@@ -443,22 +547,23 @@ public class MainWindow : Window
         if(state.Count==0)content.Children.Add(CompactLabel(hasDecision?Helpers.Status(state.Status):I18n.T("스폰 미확인","未检测到刷新"),14,state.Status=="Planned"?Theme.Amber:muted));
         if(state.Count>0 || !hasDecision)
         {
-            AddLifeSummary(content,alive,dead,raid.Ended);
-            if(halloween)((TextBlock)content.Children[^1]).Foreground=alive>0?Theme.Color("#FFD09B"):muted;
+            AddLifeSummary(content,alive,dead,raid.Ended,halloween);
         }
         if(state.SpawnChance is int chance)content.Children.Add(CompactLabel($"{I18n.T("스폰 확률","刷新概率")} {chance}%",13,muted));
         if(monitorWaves)content.Children.Add(CompactLabel(raid.Ended
             ? I18n.T("추가 스폰 감시 종료","追加刷新监测已结束")
             : I18n.T("추가 스폰 감시 중","正在监测追加刷新"),13,muted));
         if(state.At!=null)content.Children.Add(CompactLabel($"{(state.Count>0?I18n.T("첫 활성화","首次激活"):I18n.T("기록","记录"))} {state.At:HH:mm:ss}",12,text));
-        if(!halloween){eventMobs.Children.Add(MonitorCard(content,alive>0?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted));return;}
+        bool inactive=IsInactiveCard(state.Status,state.LifeInstances);
+        if(!halloween){eventMobs.Children.Add(HighlightCard(MonitorCard(content,alive>0?Theme.Green:state.Status=="Planned"?Theme.Amber:Theme.Muted,inactive),$"event:{state.Role}"));return;}
         // Opt-in skin for infected only: never alter Theme or other event cards.
         var surface=new Grid();
         surface.Children.Add(new System.Windows.Shapes.Path {Data=Geometry.Parse("M 90,0 L 0,70 M 90,0 L 35,70 M 90,0 L 0,18 M 90,0 L 90,70 M 67,0 Q 67,17 90,19 M 43,0 Q 43,34 90,39 M 18,0 Q 18,52 90,60"),
             Stroke=Theme.Color("#C18B64"),StrokeThickness=1,Opacity=0.13,Width=90,Height=70,HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Top,IsHitTestVisible=false});
         surface.Children.Add(content);
-        eventMobs.Children.Add(new Border {Background=new LinearGradientBrush((Color)ColorConverter.ConvertFromString("#302027"),(Color)ColorConverter.ConvertFromString("#1B2226"),35),
-            BorderBrush=Theme.Color("#9C5834"),BorderThickness=new Thickness(3,1,1,1),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=surface});
+        eventMobs.Children.Add(HighlightCard(new Border {Background=new LinearGradientBrush((Color)ColorConverter.ConvertFromString("#302027"),(Color)ColorConverter.ConvertFromString("#1B2226"),35),
+            BorderBrush=Theme.Color("#9C5834"),BorderThickness=new Thickness(3,1,1,1),CornerRadius=new CornerRadius(8),Margin=new Thickness(0,0,0,8),Child=surface,
+            Opacity=inactive?InactiveCardOpacity:1},$"event:{state.Role}"));
     }
     private static ImageSource HalloweenPumpkin()
     {
@@ -501,7 +606,7 @@ public class MainWindow : Window
                 }
             }
             else content.Children.Add(CompactLabel(I18n.T("스폰 미확인","未检测到刷新"),14,Theme.Muted));
-            pmcs.Children.Add(MonitorCard(content,confirmed&&alive>0?Theme.Green:Theme.Muted));
+            pmcs.Children.Add(HighlightCard(MonitorCard(content,confirmed&&alive>0?Theme.Green:Theme.Muted,IsInactiveCard(state.Status,state.LifeInstances)),$"special:{state.Role}"));
         }
     }
     // MapGeo POI names are Simplified Chinese, so only substitute them for Chinese users.

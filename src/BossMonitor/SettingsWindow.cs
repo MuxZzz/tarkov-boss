@@ -8,7 +8,7 @@ public class SettingsView : UserControl
     public bool IsApplying=>applying;
     private readonly ComboBox path=new() {IsEditable=true,MinWidth=200};
     private readonly ComboBox map=new(),mode=new();
-    private readonly System.Windows.Controls.Primitives.UniformGrid choices=new() {Columns=2};
+    private readonly StackPanel choices=new();
     private readonly TextBlock setupStatus=Theme.Label("",13,Theme.Muted),taskStatus=Theme.Label("",12,Theme.Muted),cleanup=Theme.Label("",12,Theme.Muted),storage=Theme.Label("",12,Theme.Muted);
     private readonly CheckBox top=new() {Content=I18n.T("항상 위에 표시","始终置顶")};
     private readonly CheckBox closeToTray=new() {Content=I18n.T("닫으면 트레이로 숨기기","关闭时最小化到托盘")};
@@ -83,10 +83,17 @@ public class SettingsView : UserControl
     private void LoadChoices()
     {
         checks.Clear();choices.Children.Clear();var filter=Settings.Filter(currentMap);
+        var standard=new System.Windows.Controls.Primitives.UniformGrid {Columns=2};
+        var events=new System.Windows.Controls.Primitives.UniformGrid {Columns=2};
+        choices.Children.Add(standard);
         foreach(string role in Catalog.Bosses.Keys.Concat(Settings.CustomRoles.Keys).Concat(observed.Where(r=>Catalog.IsBoss(r,Settings))).Concat(filter.Roles).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x.Equals("bossKilla",StringComparison.OrdinalIgnoreCase)?0:x.Equals("bossTagilla",StringComparison.OrdinalIgnoreCase)?1:filter.Roles.Contains(x,StringComparer.OrdinalIgnoreCase)?2:3).ThenBy(x=>Catalog.BossName(x,Settings)))
         {
-            var box=new CheckBox {Content=Catalog.BossName(role,Settings),ToolTip=role,IsChecked=filter.Roles.Contains(role,StringComparer.OrdinalIgnoreCase),Padding=new Thickness(0),MinHeight=34,VerticalAlignment=VerticalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center};checks.Add((role,box));choices.Children.Add(box);
+            var box=new CheckBox {Content=Catalog.BossName(role,Settings),ToolTip=role,IsChecked=filter.Roles.Contains(role,StringComparer.OrdinalIgnoreCase),Padding=new Thickness(0),MinHeight=34,VerticalAlignment=VerticalAlignment.Center,VerticalContentAlignment=VerticalAlignment.Center};checks.Add((role,box));
+            (role.Equals("bossScourgeEventLab",StringComparison.OrdinalIgnoreCase)?events:standard).Children.Add(box);
         }
+        choices.Children.Add(new Border {Height=1,Background=Theme.Color("#D3DDD6"),Margin=new Thickness(0,10,0,12)});
+        choices.Children.Add(Theme.Label(I18n.T("이벤트 보스","活动首领"),14,Theme.Muted));
+        choices.Children.Add(events);
         choices.IsEnabled=mode.SelectedIndex==1;
     }
     private void CaptureFilter()

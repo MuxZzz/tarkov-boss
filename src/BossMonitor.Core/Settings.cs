@@ -126,7 +126,6 @@ public class AppSettings
             foreach(var filter in settings.Maps.Values)
             {
                 added|=filter.Roles.RemoveAll(r=>r.Equals("gifter",StringComparison.OrdinalIgnoreCase))>0;
-                added|=filter.Roles.RemoveAll(r=>r.Equals("bossScourgeEventLab",StringComparison.OrdinalIgnoreCase))>0;
                 // Rogue (exUsec) and Raider (pmcBot) are rendered as their own special AI
                 // cards; stale role entries would otherwise appear as raw-ID boss cards.
                 added|=filter.Roles.RemoveAll(r=>Catalog.IsSpecialAi(r))>0;
