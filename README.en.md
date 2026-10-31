@@ -17,6 +17,7 @@ A Windows x64 app that detects boss spawns in official PvE raids running locally
 - Shows activated, estimated-alive, and confirmed-dead Rogue and Raider counts
 - Tracks infected and infected Tagilla separately in the Events section, including infected Tagilla's spawn chance, spawn decision, and life state after activation
 - Lets you choose bosses to monitor for each map
+- Highlights the difficulty and count of estimated surviving Impossible PMCs, explicitly included in the total estimated survivors
 - Continuously estimates the Woods BTR's current stop and travel segment from log signals
 - Supports installation while the game is running
 - Cleans old game logs safely with a Windows scheduled task
@@ -61,6 +62,10 @@ Requirements: Windows 10 or later, .NET 8 SDK, and Inno Setup 6.
 The installer is created in `outputs/installer`.
 
 Run `.\test.ps1` to execute the regression tests without installing the game. See the [testing guide](tests/README.md) for fixture details and instructions for checking archived original logs.
+
+## Contributing
+
+Before opening a PR, read the [contribution guide and coding conventions](CONTRIBUTING.md) (Korean). Instructions for coding agents are in [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
 
 ## License
 

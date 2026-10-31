@@ -1,4 +1,16 @@
-# Monitoring UI conventions
+# Repository instructions
+
+These instructions apply to the entire repository, for human contributors and coding agents.
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. It is the shared source for architecture, coding style, privacy, validation, and PR conventions.
+- Inspect the working tree first. Preserve existing work and keep changes focused on the requested task; do not reformat unrelated code.
+- Keep parsing and domain state in `BossMonitor.Core`, and presentation effects in the WPF app. Do not change tracked facts to implement a visual effect.
+- Validate the affected behavior using the commands and change-specific guidance in `CONTRIBUTING.md`. Report what actually ran and any remaining verification gaps.
+- Do not change real game files or user settings to exercise repository tests. Keep original logs private and generated artifacts out of commits.
+- Update versions only as part of a requested release. Keep all version-bearing files synchronized as described in `CONTRIBUTING.md`.
+- Keep these product-specific rules here. `CLAUDE.md` points to this file rather than maintaining a second copy.
+
+## Monitoring UI conventions
 
 - Put seasonal or event-only enemy types in the **Events** section below the boss cards in the left column. Infected (`infectedScreamer`) is the first example. Do not add event mobs to the right AI PMC / Scav / Rogue / Raider column.
 - Register new event cards through `MainWindow.RenderEventMobs` and reuse `RenderEventMobCard`. Keep map/event eligibility in `RenderEventMobs`, and each enemy type's tracking state separate in `RaidState`. Include new state in death matching, raid-end handling, and the render signature as needed.
@@ -7,4 +19,5 @@
 - Localize user-visible text for Korean, English and Simplified Chinese through `I18n.T` and the English dictionary in `Localization.cs`.
 - Keep the player's kill count prominent in the upper-right raid header. Raid IDs are internal correlation data; do not show them in the monitoring UI.
 - PMC cards must show Planned / NotPlanned / Unknown before any activation, then show life counts once activated. Omit the redundant "Initial spawn" row, not the pending spawn decision itself.
+- Emphasize estimated surviving Impossible PMC counts with their difficulty and count only, explicitly included in the total estimated survivors. Do not add a "High risk" label. Return to neutral styling when that count reaches zero or the raid ends; use end-of-raid wording for deaths that remain unconfirmed.
 - Run `./test.ps1` after changing tracking or rendering. Use `./test.ps1 -IncludePrivateLogs` when the ignored archive in `work/test-logs` is available. Keep original logs private; commit only anonymized fixtures under `tests/fixtures`.
